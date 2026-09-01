@@ -144,7 +144,10 @@ func openBrowser(rawURL string) error {
 		}
 		return exec.Command("xdg-open", rawURL).Start()
 	case "windows":
-		return exec.Command("cmd", "/c", "start", rawURL).Start()
+		// Avoid cmd.exe's command-line parsing here. It can drop or reinterpret
+		// URL query characters, which leaves the desktop flow on the manual
+		// token screen instead of completing the one-click login.
+		return exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", rawURL).Start()
 	default:
 		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
