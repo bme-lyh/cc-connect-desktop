@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useRef, useEffect } from 'react';
 import {
-  RefreshCw, Sun, Moon, Monitor, LogOut, Languages, ChevronDown,
+  RefreshCw, Sun, Moon, Monitor, LogOut, Languages, ChevronDown, Power, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useThemeStore } from '@/store/theme';
 import { useAuthStore } from '@/store/auth';
+import { shutdownSystem } from '@/api/status';
 
 const languages = [
   { code: 'en', label: 'EN' },
@@ -22,6 +23,8 @@ export default function Header() {
   const { theme, setTheme } = useThemeStore();
   const logout = useAuthStore((s) => s.logout);
   const [spinning, setSpinning] = useState(false);
+  const [shuttingDown, setShuttingDown] = useState(false);
+  const [shutdownComplete, setShutdownComplete] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +40,18 @@ export default function Header() {
     setSpinning(true);
     window.dispatchEvent(new CustomEvent('cc:refresh'));
     setTimeout(() => setSpinning(false), 1000);
+  };
+
+  const handleShutdown = async () => {
+    if (!window.confirm(t('system.shutdownConfirm'))) return;
+    setShuttingDown(true);
+    try {
+      await shutdownSystem();
+      setShutdownComplete(true);
+    } catch (error: any) {
+      setShuttingDown(false);
+      window.alert(`${t('system.shutdownFailed')}: ${error?.message || String(error)}`);
+    }
   };
 
   const themeIcons = { light: Sun, dark: Moon, system: Monitor };
@@ -56,6 +71,7 @@ export default function Header() {
   );
 
   return (
+    <>
     <header
       className={cn(
         'h-14 flex items-center justify-end gap-1 px-4 shrink-0 relative z-20',
@@ -115,6 +131,31 @@ export default function Header() {
       >
         <LogOut size={16} />
       </button>
+
+      {/* Stop the local cc-connect process */}
+      <button
+        type="button"
+        onClick={handleShutdown}
+        disabled={shuttingDown}
+        className={cn(
+          'p-2 rounded-lg transition-all duration-200 disabled:opacity-50',
+          'text-red-500 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400',
+        )}
+        aria-label={t('system.shutdown')}
+        title={t('system.shutdown')}
+      >
+        {shuttingDown ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} />}
+      </button>
     </header>
+    {shutdownComplete && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/80 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gray-900 p-8 text-center text-white shadow-2xl">
+          <Power size={36} className="mx-auto mb-4 text-emerald-400" />
+          <h1 className="text-xl font-semibold">{t('system.shutdownComplete')}</h1>
+          <p className="mt-2 text-sm text-gray-400">{t('system.shutdownCompleteHint')}</p>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

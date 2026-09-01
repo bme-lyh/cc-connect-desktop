@@ -40,6 +40,17 @@ type SetupCatalog struct {
 	Platforms []SetupPlatform `json:"platforms"`
 }
 
+type SetupModel struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Alias       string `json:"alias,omitempty"`
+}
+
+type SetupModelCatalog struct {
+	Models  []SetupModel `json:"models"`
+	Current string       `json:"current,omitempty"`
+}
+
 type AgentHealth struct {
 	Key       string `json:"key"`
 	Label     string `json:"label"`
@@ -67,6 +78,7 @@ type BotSummary struct {
 	PermissionMode  string `json:"permission_mode,omitempty"`
 	Model           string `json:"model,omitempty"`
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	ReplyFooter     bool   `json:"reply_footer"`
 	PlatformType    string `json:"platform_type"`
 	Configured      bool   `json:"configured"`
 	RuntimeState    string `json:"runtime_state"`
@@ -83,6 +95,7 @@ type BotUpsertRequest struct {
 	PermissionMode  string         `json:"permission_mode,omitempty"`
 	Model           string         `json:"model,omitempty"`
 	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
+	ReplyFooter     *bool          `json:"reply_footer,omitempty"`
 	PlatformType    string         `json:"platform_type"`
 	Options         map[string]any `json:"options"`
 }
@@ -122,6 +135,45 @@ func (m *ManagementServer) handleSimpleSetupCatalog(w http.ResponseWriter, r *ht
 		return
 	}
 	mgmtJSON(w, http.StatusOK, m.getSetupCatalog())
+}
+
+func (m *ManagementServer) handleSimpleSetupSelectDirectory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		mgmtError(w, http.StatusMethodNotAllowed, "POST only")
+		return
+	}
+	if m.selectSetupDir == nil {
+		mgmtError(w, http.StatusNotImplemented, "directory picker is not configured")
+		return
+	}
+	path, cancelled, err := m.selectSetupDir()
+	if err != nil {
+		mgmtError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	mgmtJSON(w, http.StatusOK, map[string]any{"path": path, "cancelled": cancelled})
+}
+
+func (m *ManagementServer) handleSimpleSetupModels(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		mgmtError(w, http.StatusMethodNotAllowed, "GET only")
+		return
+	}
+	if m.getSetupModels == nil {
+		mgmtError(w, http.StatusNotImplemented, "setup model catalog is not configured")
+		return
+	}
+	agentType := strings.TrimSpace(r.URL.Query().Get("agent"))
+	if agentType == "" {
+		mgmtError(w, http.StatusBadRequest, "agent is required")
+		return
+	}
+	catalog, err := m.getSetupModels(agentType)
+	if err != nil {
+		mgmtError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	mgmtJSON(w, http.StatusOK, catalog)
 }
 
 func (m *ManagementServer) handleBots(w http.ResponseWriter, r *http.Request) {

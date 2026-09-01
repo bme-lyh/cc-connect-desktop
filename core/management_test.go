@@ -53,6 +53,7 @@ func testManagementServer(t *testing.T, token string) (*ManagementServer, *httpt
 	prefix := "/api/v1"
 	mux.HandleFunc(prefix+"/status", mgmt.wrap(mgmt.handleStatus))
 	mux.HandleFunc(prefix+"/restart", mgmt.wrap(mgmt.handleRestart))
+	mux.HandleFunc(prefix+"/shutdown", mgmt.wrap(mgmt.handleShutdown))
 	mux.HandleFunc(prefix+"/reload", mgmt.wrap(mgmt.handleReload))
 	mux.HandleFunc(prefix+"/config", mgmt.wrap(mgmt.handleConfig))
 	mux.HandleFunc(prefix+"/settings", mgmt.wrap(mgmt.handleGlobalSettings))
@@ -242,7 +243,7 @@ func TestMgmt_Status(t *testing.T) {
 	}
 }
 
-func TestMgmt_StatusIncludesBridgeToken(t *testing.T) {
+func TestMgmt_StatusDoesNotExposeBridgeToken(t *testing.T) {
 	mgmt, ts, _ := testManagementServer(t, "tok")
 	mgmt.SetBridgeServer(NewBridgeServer(9810, "bridge-secret", "/bridge/ws", nil))
 
@@ -253,10 +254,11 @@ func TestMgmt_StatusIncludesBridgeToken(t *testing.T) {
 
 	var data struct {
 		Bridge struct {
-			Enabled bool   `json:"enabled"`
-			Port    int    `json:"port"`
-			Path    string `json:"path"`
-			Token   string `json:"token"`
+			Enabled  bool   `json:"enabled"`
+			Port     int    `json:"port"`
+			Path     string `json:"path"`
+			Token    string `json:"token"`
+			TokenSet bool   `json:"token_set"`
 		} `json:"bridge"`
 	}
 	if err := json.Unmarshal(r.Data, &data); err != nil {
@@ -265,8 +267,11 @@ func TestMgmt_StatusIncludesBridgeToken(t *testing.T) {
 	if !data.Bridge.Enabled {
 		t.Fatal("expected bridge to be enabled")
 	}
-	if data.Bridge.Token != "bridge-secret" {
-		t.Fatalf("expected bridge token, got %q", data.Bridge.Token)
+	if data.Bridge.Token != "" {
+		t.Fatalf("bridge token leaked through status: %q", data.Bridge.Token)
+	}
+	if !data.Bridge.TokenSet {
+		t.Fatal("expected bridge token_set to report configured credential")
 	}
 }
 
@@ -1248,6 +1253,28 @@ func TestMgmt_Restart_MethodNotAllowed(t *testing.T) {
 	r := mgmtGet(t, ts.URL+"/api/v1/restart", "tok")
 	if r.OK {
 		t.Fatal("expected GET on restart to fail")
+	}
+}
+
+func TestMgmt_Shutdown(t *testing.T) {
+	_, ts, _ := testManagementServer(t, "tok")
+
+	r := mgmtPost(t, ts.URL+"/api/v1/shutdown", "tok", nil)
+	if !r.OK {
+		t.Fatalf("shutdown failed: %s", r.Error)
+	}
+	select {
+	case <-ShutdownCh:
+	default:
+		t.Fatal("shutdown request was not delivered")
+	}
+}
+
+func TestMgmt_Shutdown_MethodNotAllowed(t *testing.T) {
+	_, ts, _ := testManagementServer(t, "tok")
+	r := mgmtGet(t, ts.URL+"/api/v1/shutdown", "tok")
+	if r.OK {
+		t.Fatal("GET /shutdown should fail")
 	}
 }
 

@@ -165,7 +165,12 @@
     "reloadConfirm": "從磁碟重新載入設定？",
     "level": "記錄層級",
     "limit": "筆數上限",
-    "rawConfig": "原始設定"
+    "rawConfig": "原始設定",
+    "shutdown": "結束 cc-connect",
+    "shutdownConfirm": "確定要結束 cc-connect 並停止所有機器人嗎？之後可從桌面捷徑重新啟動。",
+    "shutdownFailed": "無法停止 cc-connect",
+    "shutdownComplete": "cc-connect 已結束",
+    "shutdownCompleteHint": "所有機器人與本機服務均已關閉，現在可以關閉此瀏覽器分頁。"
   },
   "login": {
     "title": "CC-Connect 管理後台",
@@ -445,7 +450,7 @@
     "wizard": {
       "detectTitle": "選擇程式設計 Agent", "detectDescription": "設定前會在本機檢測 Codex 與 Pi。", "advancedAgent": "可於進階模式使用", "showAdvanced": "顯示其他 Agent", "hideAdvanced": "收合其他 Agent",
       "nameTitle": "為機器人命名", "nameDescription": "使用容易辨識平台帳號的簡短名稱。", "botName": "機器人名稱", "botNamePlaceholder": "開發助手",
-      "agentTitle": "Agent 與工作區", "agentDescription": "選擇本機目錄與安全的執行預設值。", "permissionMode": "權限模式", "reasoningEffort": "推理強度", "modelOptional": "模型（選填）", "safeModeHint": "簡潔精靈不會啟用無限制或 yolo 權限。",
+      "agentTitle": "Agent 與工作區", "agentDescription": "選擇本機目錄與安全的執行預設值。", "permissionMode": "權限模式", "reasoningEffort": "推理強度", "modelOptional": "模型（選填）", "browseDirectory": "選擇資料夾", "model": "模型", "useAgentDefault": "使用 Agent 預設模型", "refreshModels": "重新整理模型", "loadingModels": "正在讀取可用模型……", "modelLoadFailed": "無法讀取可用模型", "safeModeHint": "簡潔精靈不會啟用無限制或 yolo 權限。", "showReplyFooter": "顯示回答底部執行資訊", "showReplyFooterHint": "在每次回答後附加模型、推理強度、Token、上下文用量與工作目錄。",
       "platformTitle": "連接 IM 平台", "platformDescription": "所有已編譯平台都在此；不同帳號請建立不同機器人。", "qrSetup": "掃碼連接", "formSetup": "填寫憑證", "scanQR": "請使用手機 App 掃碼並確認授權。", "authorized": "已收到授權",
       "finishTitle": "確認並啟動", "finishDescription": "憑證將儲存在系統憑證庫。", "platform": "平台", "restartNotice": "儲存後會自動套用設定並重新啟動本機服務。", "saveStart": "儲存並啟動"
     }

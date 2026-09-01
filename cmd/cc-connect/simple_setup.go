@@ -71,6 +71,8 @@ func wireSimpleSetup(m *core.ManagementServer, runtimeProjects []config.ProjectC
 		config.SetSimpleBotEnabled,
 		config.RemoveSimpleBot,
 	)
+	m.SetSetupDirectoryPicker(selectSetupDirectory)
+	m.SetSetupModelCatalog(listSetupModels)
 }
 
 func projectBotSummary(project config.ProjectConfig, state string) core.BotSummary {
@@ -78,6 +80,7 @@ func projectBotSummary(project config.ProjectConfig, state string) core.BotSumma
 	mode, _ := project.Agent.Options["mode"].(string)
 	model, _ := project.Agent.Options["model"].(string)
 	reasoning, _ := project.Agent.Options["reasoning_effort"].(string)
+	replyFooter := project.ReplyFooter == nil || *project.ReplyFooter
 	return core.BotSummary{
 		ID:              project.ID,
 		Name:            project.Name,
@@ -88,6 +91,7 @@ func projectBotSummary(project config.ProjectConfig, state string) core.BotSumma
 		PermissionMode:  mode,
 		Model:           model,
 		ReasoningEffort: reasoning,
+		ReplyFooter:     replyFooter,
 		PlatformType:    project.Platforms[0].Type,
 		Configured:      true,
 		RuntimeState:    state,
@@ -189,12 +193,27 @@ func saveSimpleBot(req core.BotUpsertRequest, catalog core.SetupCatalog, store s
 	if strings.TrimSpace(req.ReasoningEffort) != "" {
 		agentOptions["reasoning_effort"] = strings.TrimSpace(req.ReasoningEffort)
 	}
+	var replyFooter *bool
+	if existing != nil && existing.ReplyFooter != nil {
+		value := *existing.ReplyFooter
+		replyFooter = &value
+	} else if existing == nil {
+		// Simple desktop bots default to clean answers without diagnostic
+		// metadata. Advanced projects retain the upstream default (enabled).
+		value := false
+		replyFooter = &value
+	}
+	if req.ReplyFooter != nil {
+		value := *req.ReplyFooter
+		replyFooter = &value
+	}
 	bot := config.ProjectConfig{
 		ID:          req.ID,
 		Name:        name,
 		DisplayName: strings.TrimSpace(req.DisplayName),
 		Enabled:     &enabled,
 		SimpleMode:  &simple,
+		ReplyFooter: replyFooter,
 		Agent: config.AgentConfig{
 			Type:    req.AgentType,
 			Options: agentOptions,
@@ -272,11 +291,7 @@ func detectSetupAgent(agent core.SetupAgent) core.AgentHealth {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
-	versionArgs := []string{"--version"}
-	versionCmd := exec.CommandContext(ctx, path, versionArgs...)
-	if strings.HasSuffix(strings.ToLower(path), ".ps1") {
-		versionCmd = exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-File", path, "--version")
-	}
+	versionCmd := setupAgentCommand(ctx, path, "--version")
 	out, versionErr := versionCmd.CombinedOutput()
 	health.Version = strings.TrimSpace(string(out))
 	if versionErr != nil {
@@ -287,7 +302,7 @@ func detectSetupAgent(agent core.SetupAgent) core.AgentHealth {
 	if agent.Key == "codex" {
 		loginCtx, loginCancel := context.WithTimeout(context.Background(), 4*time.Second)
 		defer loginCancel()
-		loginCmd := exec.CommandContext(loginCtx, path, "login", "status")
+		loginCmd := setupAgentCommand(loginCtx, path, "login", "status")
 		loginOut, loginErr := loginCmd.CombinedOutput()
 		health.LoggedIn = loginErr == nil
 		if loginErr != nil {
@@ -296,6 +311,68 @@ func detectSetupAgent(agent core.SetupAgent) core.AgentHealth {
 		}
 	}
 	return health
+}
+
+func setupAgentCommand(ctx context.Context, path string, args ...string) *exec.Cmd {
+	var cmd *exec.Cmd
+	if strings.HasSuffix(strings.ToLower(path), ".ps1") {
+		powerShellArgs := []string{"-NoProfile", "-NonInteractive", "-File", path}
+		cmd = exec.CommandContext(ctx, "powershell.exe", append(powerShellArgs, args...)...)
+	} else {
+		cmd = exec.CommandContext(ctx, path, args...)
+	}
+	configureBackgroundCommand(cmd)
+	return cmd
+}
+
+func listSetupModels(agentType string) (core.SetupModelCatalog, error) {
+	agentType = strings.TrimSpace(agentType)
+	if agentType == "" {
+		return core.SetupModelCatalog{}, fmt.Errorf("agent is required")
+	}
+	agent, err := core.CreateAgent(agentType, map[string]any{"work_dir": "."})
+	if err != nil {
+		return core.SetupModelCatalog{}, fmt.Errorf("create %s agent for model discovery: %w", agentType, err)
+	}
+	defer func() {
+		if err := agent.Stop(); err != nil {
+			slog.Debug("stop model discovery agent", "agent", agentType, "error", err)
+		}
+	}()
+
+	switcher, ok := agent.(core.ModelSwitcher)
+	if !ok {
+		return core.SetupModelCatalog{}, fmt.Errorf("agent %q does not provide a model catalog", agentType)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	available := switcher.AvailableModels(ctx)
+	if len(available) == 0 {
+		return core.SetupModelCatalog{}, fmt.Errorf("%s did not report any available models; check its local model configuration and sign-in status", agentType)
+	}
+
+	models := make([]core.SetupModel, 0, len(available))
+	seen := make(map[string]struct{}, len(available))
+	for _, model := range available {
+		name := strings.TrimSpace(model.Name)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		models = append(models, core.SetupModel{
+			Name:        name,
+			Description: strings.TrimSpace(model.Desc),
+			Alias:       strings.TrimSpace(model.Alias),
+		})
+	}
+	if len(models) == 0 {
+		return core.SetupModelCatalog{}, fmt.Errorf("%s returned an empty model catalog", agentType)
+	}
+	sort.SliceStable(models, func(i, j int) bool { return models[i].Name < models[j].Name })
+	return core.SetupModelCatalog{Models: models, Current: strings.TrimSpace(switcher.GetModel())}, nil
 }
 
 func agentInstallGuide(key string) string {

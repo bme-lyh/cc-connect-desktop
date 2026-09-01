@@ -165,7 +165,12 @@
     "reloadConfirm": "ディスクから設定を再読み込みしますか？",
     "level": "ログレベル",
     "limit": "行数の上限",
-    "rawConfig": "生の設定"
+    "rawConfig": "生の設定",
+    "shutdown": "cc-connectを終了",
+    "shutdownConfirm": "cc-connectを終了し、すべてのボットを停止しますか？デスクトップのショートカットから再起動できます。",
+    "shutdownFailed": "cc-connectを停止できませんでした",
+    "shutdownComplete": "cc-connectを終了しました",
+    "shutdownCompleteHint": "すべてのボットとローカルサービスを停止しました。このブラウザータブを閉じてください。"
   },
   "login": {
     "title": "CC-Connect 管理コンソール",
@@ -434,7 +439,7 @@
     "myBots": "マイボット", "botSubtitle": "1つのボットに1つのAgent、ワークスペース、メッセージアカウントを接続します。", "addBot": "ボットを追加", "noBots": "ボットはまだありません。最初のボットを作成してください。", "start": "開始", "stop": "停止", "reconnect": "再接続", "advanced": "詳細設定", "advancedProjectsHint": "従来の複数プラットフォーム構成を含む詳細プロジェクト。", "confirmRemove": "{{name}} を設定から削除しますか？セッションと資格情報は保持されます。",
     "state": { "running": "実行中", "stopped": "停止中", "error": "要確認", "applying": "適用中" },
     "wizard": {
-      "detectTitle": "コーディングAgentを選択", "detectDescription": "設定前にCodexとPiをローカルで確認します。", "advancedAgent": "詳細モードで使用可能", "showAdvanced": "他のAgentを表示", "hideAdvanced": "他のAgentを隠す", "nameTitle": "ボットに名前を付ける", "nameDescription": "アカウントを識別しやすい短い名前を使用します。", "botName": "ボット名", "botNamePlaceholder": "開発アシスタント", "agentTitle": "Agentとワークスペース", "agentDescription": "ローカルディレクトリと安全な既定値を選択します。", "permissionMode": "権限モード", "reasoningEffort": "推論レベル", "modelOptional": "モデル（任意）", "safeModeHint": "簡単設定では無制限またはyolo権限を有効にしません。", "platformTitle": "IMプラットフォームを接続", "platformDescription": "コンパイル済みの全プラットフォームを利用できます。", "qrSetup": "QRコード", "formSetup": "資格情報を入力", "scanQR": "モバイルアプリでスキャンして承認してください。", "authorized": "承認済み", "finishTitle": "確認して開始", "finishDescription": "資格情報はシステムの資格情報ストアに保存されます。", "platform": "プラットフォーム", "restartNotice": "保存後、設定を適用してローカルサービスを自動再起動します。", "saveStart": "保存して開始"
+      "detectTitle": "コーディングAgentを選択", "detectDescription": "設定前にCodexとPiをローカルで確認します。", "advancedAgent": "詳細モードで使用可能", "showAdvanced": "他のAgentを表示", "hideAdvanced": "他のAgentを隠す", "nameTitle": "ボットに名前を付ける", "nameDescription": "アカウントを識別しやすい短い名前を使用します。", "botName": "ボット名", "botNamePlaceholder": "開発アシスタント", "agentTitle": "Agentとワークスペース", "agentDescription": "ローカルディレクトリと安全な既定値を選択します。", "permissionMode": "権限モード", "reasoningEffort": "推論レベル", "modelOptional": "モデル（任意）", "browseDirectory": "フォルダーを選択", "model": "モデル", "useAgentDefault": "Agentの既定モデルを使用", "refreshModels": "モデルを更新", "loadingModels": "利用可能なモデルを読み込み中…", "modelLoadFailed": "利用可能なモデルを読み込めません", "safeModeHint": "簡単設定では無制限またはyolo権限を有効にしません。", "showReplyFooter": "回答の実行情報を表示", "showReplyFooterHint": "各回答の末尾にモデル、推論レベル、トークン、コンテキスト使用率、作業フォルダーを追加します。", "platformTitle": "IMプラットフォームを接続", "platformDescription": "コンパイル済みの全プラットフォームを利用できます。", "qrSetup": "QRコード", "formSetup": "資格情報を入力", "scanQR": "モバイルアプリでスキャンして承認してください。", "authorized": "承認済み", "finishTitle": "確認して開始", "finishDescription": "資格情報はシステムの資格情報ストアに保存されます。", "platform": "プラットフォーム", "restartNotice": "保存後、設定を適用してローカルサービスを自動再起動します。", "saveStart": "保存して開始"
     }
   },
   "theme": {

@@ -73,6 +73,8 @@ type ManagementServer struct {
 
 	getSetupStatus  func() (SetupStatus, error)
 	getSetupCatalog func() SetupCatalog
+	selectSetupDir  func() (string, bool, error)
+	getSetupModels  func(string) (SetupModelCatalog, error)
 	listBots        func() ([]BotSummary, error)
 	upsertBot       func(BotUpsertRequest) (BotSummary, error)
 	setBotEnabled   func(string, bool) error
@@ -209,6 +211,14 @@ func (m *ManagementServer) SetSimpleSetupCallbacks(
 	m.removeBot = remove
 }
 
+func (m *ManagementServer) SetSetupDirectoryPicker(fn func() (string, bool, error)) {
+	m.selectSetupDir = fn
+}
+
+func (m *ManagementServer) SetSetupModelCatalog(fn func(string) (SetupModelCatalog, error)) {
+	m.getSetupModels = fn
+}
+
 // CCSwitchProviderInfo represents a provider read from the cc-switch database.
 type CCSwitchProviderInfo struct {
 	Name      string `json:"name"`
@@ -242,6 +252,7 @@ func (m *ManagementServer) buildHandler(mux *http.ServeMux) http.Handler {
 	mux.HandleFunc(prefix+"/status", m.wrap(m.handleStatus))
 	mux.HandleFunc(prefix+"/ready", m.wrap(m.handleReady))
 	mux.HandleFunc(prefix+"/restart", m.wrap(m.handleRestart))
+	mux.HandleFunc(prefix+"/shutdown", m.wrap(m.handleShutdown))
 	mux.HandleFunc(prefix+"/reload", m.wrap(m.handleReload))
 	mux.HandleFunc(prefix+"/config", m.wrap(m.handleConfig))
 	mux.HandleFunc(prefix+"/settings", m.wrap(m.handleGlobalSettings))
@@ -250,6 +261,8 @@ func (m *ManagementServer) buildHandler(mux *http.ServeMux) http.Handler {
 	mux.HandleFunc(prefix+"/agents", m.wrap(m.handleAgents))
 	mux.HandleFunc(prefix+"/setup/status", m.wrap(m.handleSimpleSetupStatus))
 	mux.HandleFunc(prefix+"/setup/catalog", m.wrap(m.handleSimpleSetupCatalog))
+	mux.HandleFunc(prefix+"/setup/select-directory", m.wrap(m.handleSimpleSetupSelectDirectory))
+	mux.HandleFunc(prefix+"/setup/models", m.wrap(m.handleSimpleSetupModels))
 	mux.HandleFunc(prefix+"/bots", m.wrap(m.handleBots))
 	mux.HandleFunc(prefix+"/bots/", m.wrap(m.handleBotRoutes))
 
@@ -498,6 +511,19 @@ func (m *ManagementServer) handleRestart(w http.ResponseWriter, r *http.Request)
 		mgmtOK(w, "restart initiated")
 	default:
 		mgmtError(w, http.StatusConflict, "restart already in progress")
+	}
+}
+
+func (m *ManagementServer) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		mgmtError(w, http.StatusMethodNotAllowed, "POST only")
+		return
+	}
+	select {
+	case ShutdownCh <- struct{}{}:
+		mgmtOK(w, "shutdown initiated")
+	default:
+		mgmtError(w, http.StatusConflict, "shutdown already in progress")
 	}
 }
 

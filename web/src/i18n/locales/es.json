@@ -165,7 +165,12 @@
     "reloadConfirm": "¿Recargar la configuración desde el disco?",
     "level": "Nivel de registro",
     "limit": "Límite de líneas",
-    "rawConfig": "Config. sin procesar"
+    "rawConfig": "Config. sin procesar",
+    "shutdown": "Salir de cc-connect",
+    "shutdownConfirm": "¿Salir de cc-connect y detener todos los bots? Puedes iniciarlo de nuevo desde el acceso directo del escritorio.",
+    "shutdownFailed": "No se pudo detener cc-connect",
+    "shutdownComplete": "cc-connect se ha detenido",
+    "shutdownCompleteHint": "Todos los bots y servicios locales están cerrados. Ya puedes cerrar esta pestaña."
   },
   "login": {
     "title": "CC-Connect Admin",
@@ -434,7 +439,7 @@
     "myBots": "Mis bots", "botSubtitle": "Un bot conecta un agente, un espacio de trabajo y una cuenta de mensajería.", "addBot": "Añadir bot", "noBots": "Aún no hay bots. Crea el primero para comenzar.", "start": "Iniciar", "stop": "Detener", "reconnect": "Reconectar", "advanced": "Ajustes avanzados", "advancedProjectsHint": "Proyectos avanzados, incluidas configuraciones antiguas multiplataforma.", "confirmRemove": "¿Quitar {{name}} de la configuración? Se conservarán las sesiones y credenciales.",
     "state": { "running": "En ejecución", "stopped": "Detenido", "error": "Requiere atención", "applying": "Aplicando" },
     "wizard": {
-      "detectTitle": "Elige el agente de programación", "detectDescription": "Codex y Pi se comprueban localmente antes de configurar.", "advancedAgent": "Disponible en modo avanzado", "showAdvanced": "Mostrar otros agentes", "hideAdvanced": "Ocultar otros agentes", "nameTitle": "Pon nombre al bot", "nameDescription": "Usa un nombre corto que identifique la cuenta.", "botName": "Nombre del bot", "botNamePlaceholder": "Asistente de desarrollo", "agentTitle": "Agente y espacio de trabajo", "agentDescription": "Elige el directorio local y valores seguros.", "permissionMode": "Modo de permisos", "reasoningEffort": "Nivel de razonamiento", "modelOptional": "Modelo (opcional)", "safeModeHint": "El asistente sencillo nunca activa acceso ilimitado ni yolo.", "platformTitle": "Conecta una plataforma IM", "platformDescription": "Aquí están todas las plataformas compiladas.", "qrSetup": "Escanear QR", "formSetup": "Introducir credenciales", "scanQR": "Escanea con la aplicación móvil y confirma.", "authorized": "Autorización recibida", "finishTitle": "Revisar e iniciar", "finishDescription": "Las credenciales se guardan en el almacén del sistema.", "platform": "Plataforma", "restartNotice": "Al guardar se aplica la configuración y se reinicia el servicio local.", "saveStart": "Guardar e iniciar"
+      "detectTitle": "Elige el agente de programación", "detectDescription": "Codex y Pi se comprueban localmente antes de configurar.", "advancedAgent": "Disponible en modo avanzado", "showAdvanced": "Mostrar otros agentes", "hideAdvanced": "Ocultar otros agentes", "nameTitle": "Pon nombre al bot", "nameDescription": "Usa un nombre corto que identifique la cuenta.", "botName": "Nombre del bot", "botNamePlaceholder": "Asistente de desarrollo", "agentTitle": "Agente y espacio de trabajo", "agentDescription": "Elige el directorio local y valores seguros.", "permissionMode": "Modo de permisos", "reasoningEffort": "Nivel de razonamiento", "modelOptional": "Modelo (opcional)", "browseDirectory": "Elegir carpeta", "model": "Modelo", "useAgentDefault": "Usar el modelo predeterminado del agente", "refreshModels": "Actualizar modelos", "loadingModels": "Cargando modelos disponibles...", "modelLoadFailed": "No se pudieron cargar los modelos disponibles", "safeModeHint": "El asistente sencillo nunca activa acceso ilimitado ni yolo.", "showReplyFooter": "Mostrar detalles de la respuesta", "showReplyFooterHint": "Añade a cada respuesta el modelo, el nivel de razonamiento, los tokens, el uso de contexto y la carpeta de trabajo.", "platformTitle": "Conecta una plataforma IM", "platformDescription": "Aquí están todas las plataformas compiladas.", "qrSetup": "Escanear QR", "formSetup": "Introducir credenciales", "scanQR": "Escanea con la aplicación móvil y confirma.", "authorized": "Autorización recibida", "finishTitle": "Revisar e iniciar", "finishDescription": "Las credenciales se guardan en el almacén del sistema.", "platform": "Plataforma", "restartNotice": "Al guardar se aplica la configuración y se reinicia el servicio local.", "saveStart": "Guardar e iniciar"
     }
   },
   "theme": {

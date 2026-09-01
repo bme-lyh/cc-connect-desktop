@@ -43,6 +43,31 @@
 > [!NOTE]
 > 当前分支是在保持上游 cc-connect 兼容性的基础上制作的简洁桌面派生版，新增零配置启动、首次向导、机器人卡片、Windows 凭据管理器和便携包。原 MIT 许可证及第三方版权声明继续有效。
 
+## 简洁桌面版
+
+**大白话说明：**让 cc-connect 在你的 Windows 电脑上运行，然后直接从常用聊天软件里遥控本机的 Codex、Pi 或其他编程 Agent。代码和 Agent 都留在本机，聊天机器人只是远程操作入口。
+
+这个版本主要把首次配置变简单：
+
+- 不用先手写 `config.toml` 就能启动。
+- 用五步向导创建机器人：选 Agent、起名字、选工作目录、连接聊天平台、完成。
+- 可直接在页面里选择 Windows 文件夹和本机可用模型。
+- 机器人密钥存入 Windows 凭据管理器，不以明文写进配置。
+- 可在浏览器页面里启动、停用、编辑机器人，也能安全退出本地程序。
+- 原来的 `cc-connect` 命令和高级配置仍然保留。
+
+### 实际使用效果
+
+在飞书、Telegram 或微信里发送需求，本机 Agent 完成后会把回答发回同一个对话。
+
+<p align="center">
+  <img src="docs/images/screenshot/cc-connect-lark.JPG" alt="在飞书中使用本地编程 Agent" width="31%" />
+  <img src="docs/images/screenshot/cc-connect-telegram.JPG" alt="在 Telegram 中使用本地编程 Agent" width="31%" />
+  <img src="docs/images/screenshot/cc-connect-wechat.JPG" alt="在微信中使用本地编程 Agent" width="31%" />
+</p>
+
+> Windows 快速开始：构建或下载便携包，解压后运行 `install-windows.ps1`，再打开桌面的 **CC-Connect** 快捷方式，剩余配置按浏览器向导完成即可。
+
 ## ❤️ 赞助
 
 > 想在这里展示？联系：chg80333@gmail.com | 微信：mongorz

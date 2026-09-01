@@ -164,7 +164,12 @@
     "reloadConfirm": "Перезагрузить конфигурацию с диска?",
     "level": "Уровень логов",
     "limit": "Лимит строк",
-    "rawConfig": "Сырой конфиг"
+    "rawConfig": "Сырой конфиг",
+    "shutdown": "Выйти из cc-connect",
+    "shutdownConfirm": "Завершить cc-connect и остановить всех ботов? Запустить снова можно с ярлыка на рабочем столе.",
+    "shutdownFailed": "Не удалось остановить cc-connect",
+    "shutdownComplete": "cc-connect остановлен",
+    "shutdownCompleteHint": "Все боты и локальные службы остановлены. Эту вкладку браузера можно закрыть."
   },
   "login": {
     "title": "CC-Connect Admin",
@@ -405,6 +410,18 @@
     "free": "Бесплатно",
     "freemium": "Freemium",
     "paid": "Платно"
+  },
+  "simple": {
+    "wizard": {
+      "browseDirectory": "Выбрать папку",
+      "model": "Модель",
+      "useAgentDefault": "Использовать модель агента по умолчанию",
+      "refreshModels": "Обновить модели",
+      "loadingModels": "Загрузка доступных моделей…",
+      "modelLoadFailed": "Не удалось загрузить доступные модели",
+      "showReplyFooter": "Показывать сведения об ответе",
+      "showReplyFooterHint": "Добавлять в конец каждого ответа модель, уровень рассуждений, токены, использование контекста и рабочую папку."
+    }
   },
   "theme": {
     "light": "Светлая",

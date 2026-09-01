@@ -40,6 +40,8 @@ vendor/
 config.toml
 config.*.toml
 !config.example.toml
+*.toml.previous
+*.toml.apply-pending
 .env
 *.local.toml
 

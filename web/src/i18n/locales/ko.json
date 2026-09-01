@@ -164,7 +164,12 @@
     "reloadConfirm": "디스크에서 설정을 다시 로드하시겠습니까?",
     "level": "로그 레벨",
     "limit": "줄 제한",
-    "rawConfig": "원본 설정"
+    "rawConfig": "원본 설정",
+    "shutdown": "cc-connect 종료",
+    "shutdownConfirm": "cc-connect를 종료하고 모든 봇을 중지할까요? 바탕 화면 바로 가기에서 다시 시작할 수 있습니다.",
+    "shutdownFailed": "cc-connect를 중지할 수 없습니다",
+    "shutdownComplete": "cc-connect가 종료되었습니다",
+    "shutdownCompleteHint": "모든 봇과 로컬 서비스가 종료되었습니다. 이제 이 브라우저 탭을 닫아도 됩니다."
   },
   "login": {
     "title": "CC-Connect 관리 콘솔",
@@ -424,6 +429,18 @@
     "free": "무료",
     "freemium": "부분 유료",
     "paid": "유료"
+  },
+  "simple": {
+    "wizard": {
+      "browseDirectory": "폴더 선택",
+      "model": "모델",
+      "useAgentDefault": "Agent 기본 모델 사용",
+      "refreshModels": "모델 새로 고침",
+      "loadingModels": "사용 가능한 모델을 불러오는 중…",
+      "modelLoadFailed": "사용 가능한 모델을 불러오지 못했습니다",
+      "showReplyFooter": "답변 세부 정보 표시",
+      "showReplyFooterHint": "각 답변 끝에 모델, 추론 수준, 토큰, 컨텍스트 사용량 및 작업 폴더를 추가합니다."
+    }
   },
   "theme": {
     "light": "라이트",

@@ -327,6 +327,10 @@ func (e *Engine) dispatchRestartNotify(req *RestartRequest) error {
 // to perform a graceful shutdown followed by syscall.Exec.
 var RestartCh = make(chan RestartRequest, 1)
 
+// ShutdownCh is signaled by the local management UI when the user explicitly
+// asks cc-connect to stop without restarting.
+var ShutdownCh = make(chan struct{}, 1)
+
 // DisplayCfg controls how intermediate messages are surfaced.
 // A value of -1 means "use default", 0 means "no truncation".
 type DisplayCfg struct {

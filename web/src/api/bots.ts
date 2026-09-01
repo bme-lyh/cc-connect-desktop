@@ -33,6 +33,9 @@ export interface SetupField {
 export interface SetupPlatform { key: string; label: string; qr?: boolean; fields: SetupField[]; }
 export interface SetupAgent { key: string; label: string; recommended?: boolean; modes?: string[]; }
 export interface SetupCatalog { agents: SetupAgent[]; platforms: SetupPlatform[]; }
+export interface SetupModel { name: string; description?: string; alias?: string; }
+export interface SetupModelCatalog { models: SetupModel[]; current?: string; }
+export interface DirectorySelection { path: string; cancelled: boolean; }
 
 export interface BotSummary {
   id: string;
@@ -44,6 +47,7 @@ export interface BotSummary {
   permission_mode?: string;
   model?: string;
   reasoning_effort?: string;
+  reply_footer: boolean;
   platform_type: string;
   configured: boolean;
   runtime_state: 'running' | 'stopped' | 'error' | 'applying';
@@ -60,12 +64,15 @@ export interface BotRequest {
   permission_mode?: string;
   model?: string;
   reasoning_effort?: string;
+  reply_footer?: boolean;
   platform_type: string;
   options: Record<string, unknown>;
 }
 
 export const getSetupStatus = () => api.get<SetupStatus>('/setup/status');
 export const getSetupCatalog = () => api.get<SetupCatalog>('/setup/catalog');
+export const getSetupModels = (agent: string) => api.get<SetupModelCatalog>('/setup/models', { agent });
+export const selectSetupDirectory = () => api.post<DirectorySelection>('/setup/select-directory');
 export const listBots = () => api.get<{ bots: BotSummary[] }>('/bots');
 export const createBot = (body: BotRequest) => api.post<{ bot: BotSummary; applying: boolean }>('/bots', body);
 export const updateBot = (id: string, body: BotRequest) => api.put<{ bot: BotSummary; applying: boolean }>(`/bots/${id}`, body);

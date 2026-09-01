@@ -1348,6 +1348,8 @@ projectLoop:
 	var restartReq *core.RestartRequest
 	select {
 	case <-sigCh:
+	case <-core.ShutdownCh:
+		slog.Info("shutdown requested via management UI")
 	case req := <-core.RestartCh:
 		restartReq = &req
 		slog.Info("restart requested via /restart command", "session", req.SessionKey, "platform", req.Platform)

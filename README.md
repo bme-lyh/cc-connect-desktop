@@ -43,6 +43,31 @@
 > [!NOTE]
 > This branch is a simple desktop derivative that stays compatible with upstream cc-connect. It adds zero-configuration startup, a first-run wizard, bot cards, Windows Credential Manager storage, and portable Windows packaging. The original MIT license and third-party notices remain in force.
 
+## Simple desktop edition
+
+**In plain English:** keep cc-connect running on your Windows PC, then talk to Codex, Pi, or another local coding agent from the chat app you already use. Your code and agent stay on your computer; the messaging bot is the remote control.
+
+This edition makes the first setup less technical:
+
+- Start with no hand-written `config.toml`.
+- Create a bot with a five-step wizard: agent, name, workspace, chat platform, done.
+- Pick a Windows folder and an available model from the page.
+- Store bot secrets in Windows Credential Manager instead of plain text.
+- Start, stop, edit, and quit local bots from the browser page.
+- Keep the original `cc-connect` commands and advanced configuration available.
+
+### What using it looks like
+
+Send a request in Feishu, Telegram, or WeChat and receive the local agent's answer in the same conversation.
+
+<p align="center">
+  <img src="docs/images/screenshot/cc-connect-lark.JPG" alt="Use a local coding agent from Feishu" width="31%" />
+  <img src="docs/images/screenshot/cc-connect-telegram.JPG" alt="Use a local coding agent from Telegram" width="31%" />
+  <img src="docs/images/screenshot/cc-connect-wechat.JPG" alt="Use a local coding agent from WeChat" width="31%" />
+</p>
+
+> Windows quick start: build or download the portable package, extract it, run `install-windows.ps1`, and open the **CC-Connect** desktop shortcut. The browser wizard handles the rest.
+
 ## ❤️ Sponsor
 
 > Want to appear here? Contact: chg80333@gmail.com | WeChat: mongorz

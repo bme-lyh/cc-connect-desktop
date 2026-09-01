@@ -34,7 +34,13 @@ Run `cc-connect web` or use the Windows shortcut. The launcher starts the loopba
 
 The simple home page treats one bot as one agent, one workspace, and one platform account. Codex and Pi are recommended in the wizard; every registered platform is available, while providers, skills, cron, and multi-platform projects remain under Advanced Settings. Bot secrets are stored in the operating-system credential store and management responses expose only whether a value is configured.
 
-Saving a bot validates the workspace, agent and platform fields, writes the configuration atomically, and performs a controlled restart. If the managed configuration cannot be loaded, cc-connect restores `config.toml.previous`. Stopping or removing a bot leaves its session data and stored credentials intact.
+On Windows, agent version and sign-in checks run without opening console windows. The workspace field supports both manual entry and a native folder picker that is owned by a topmost helper window, so it cannot remain hidden behind the browser. The model field is a refreshable list supplied by the selected agent's local model catalog; it is no longer a free-text field, and discovery errors are shown next to the selector.
+
+**Show answer details** controls the answer footer containing model, reasoning effort, token usage, context use, and workspace. New simple bots default to a clean answer with this disabled; editing an older bot preserves its current setting. Advanced projects expose the same master control as **Reply footer**.
+
+Use **Quit cc-connect** in the top-right header to stop all bots and the local background process gracefully. This is different from **Log out**, which only removes the browser's saved management token. Restart the application later from the desktop shortcut or `cc-connect web`.
+
+Saving a bot validates the workspace, agent and platform fields, writes the configuration atomically, and performs a controlled restart without creating a Windows console window. If the managed configuration cannot be loaded, cc-connect restores `config.toml.previous`. Stopping or removing a bot leaves its session data and stored credentials intact.
 
 ---
 

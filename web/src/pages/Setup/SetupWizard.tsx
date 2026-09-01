@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Bot, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import { Bot, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FolderOpen, Loader2, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { Button, Card, Input } from '@/components/ui';
-import { createBot, getSetupCatalog, getSetupStatus, listBots, updateBot, waitUntilReady, type AgentHealth, type SetupCatalog, type SetupField, type SetupPlatform } from '@/api/bots';
+import { createBot, getSetupCatalog, getSetupModels, getSetupStatus, listBots, selectSetupDirectory, updateBot, waitUntilReady, type AgentHealth, type SetupCatalog, type SetupField, type SetupModel, type SetupPlatform } from '@/api/bots';
 import { setupFeishuBegin, setupFeishuPoll, setupWeixinBegin, setupWeixinPoll } from '@/api/setup';
 
 type Values = Record<string, any>;
@@ -23,7 +23,12 @@ export default function SetupWizard() {
   const [workDir, setWorkDir] = useState('');
   const [permissionMode, setPermissionMode] = useState('default');
   const [model, setModel] = useState('');
+  const [models, setModels] = useState<SetupModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelError, setModelError] = useState('');
+  const [directoryPicking, setDirectoryPicking] = useState(false);
   const [reasoningEffort, setReasoningEffort] = useState('medium');
+  const [replyFooter, setReplyFooter] = useState(false);
   const [platformType, setPlatformType] = useState('');
   const [originalPlatformType, setOriginalPlatformType] = useState('');
   const [options, setOptions] = useState<Values>({});
@@ -44,6 +49,7 @@ export default function SetupWizard() {
           setPermissionMode(editing.permission_mode || 'default');
           setModel(editing.model || '');
           setReasoningEffort(editing.reasoning_effort || 'medium');
+          setReplyFooter(editing.reply_footer);
           setPlatformType(editing.platform_type);
           setOriginalPlatformType(editing.platform_type);
         } else {
@@ -64,6 +70,52 @@ export default function SetupWizard() {
     const modes = selectedAgent?.modes || [];
     if (modes.length > 0 && !modes.includes(permissionMode)) setPermissionMode(modes[0]);
   }, [selectedAgent, permissionMode]);
+
+  const loadModels = useCallback(async () => {
+    if (!agentType) return;
+    setModelsLoading(true);
+    setModelError('');
+    try {
+      const response = await getSetupModels(agentType);
+      const nextModels = response.models || [];
+      setModels(nextModels);
+      setModel(current => {
+        // Preserve an existing configured model even when local discovery no
+        // longer reports it. modelOptions keeps that value selectable so
+        // editing an older bot cannot silently reset its model.
+        if (current) return current;
+        if (response.current && nextModels.some(item => item.name === response.current)) return response.current;
+        return '';
+      });
+    } catch (e: any) {
+      setModels([]);
+      setModelError(e?.message || String(e));
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [agentType]);
+
+  useEffect(() => {
+    if (step === 3) void loadModels();
+  }, [step, loadModels]);
+
+  const browseDirectory = async () => {
+    setDirectoryPicking(true);
+    setError('');
+    try {
+      const result = await selectSetupDirectory();
+      if (!result.cancelled && result.path) setWorkDir(result.path);
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setDirectoryPicking(false);
+    }
+  };
+
+  const modelOptions = useMemo(() => {
+    if (!model || models.some(item => item.name === model)) return models;
+    return [{ name: model }, ...models];
+  }, [model, models]);
 
   const next = () => { setError(''); setStep(value => Math.min(5, value + 1)); };
   const back = () => { setError(''); setStep(value => Math.max(1, value - 1)); };
@@ -89,6 +141,7 @@ export default function SetupWizard() {
         permission_mode: permissionMode,
         model: model.trim() || undefined,
         reasoning_effort: reasoningEffort || undefined,
+        reply_footer: replyFooter,
         platform_type: platformType,
         options,
       };
@@ -141,13 +194,33 @@ export default function SetupWizard() {
       {step === 3 && (
         <div className="space-y-4">
           <StepTitle title={t('simple.wizard.agentTitle')} description={t('simple.wizard.agentDescription')} />
-          <Input label={t('setup.workDir', 'Working directory')} value={workDir} onChange={event => setWorkDir(event.target.value)} placeholder="D:\\projects\\my-app" />
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
+            <Input label={t('setup.workDir', 'Working directory')} value={workDir} onChange={event => setWorkDir(event.target.value)} placeholder="D:\\projects\\my-app" />
+            <Button type="button" variant="secondary" onClick={browseDirectory} loading={directoryPicking}><FolderOpen size={15} />{t('simple.wizard.browseDirectory')}</Button>
+          </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <Select label={t('simple.wizard.permissionMode')} value={permissionMode} onChange={setPermissionMode} options={selectedAgent?.modes || ['default']} />
             <Select label={t('simple.wizard.reasoningEffort')} value={reasoningEffort} onChange={setReasoningEffort} options={['low', 'medium', 'high', 'xhigh']} />
           </div>
-          <Input label={t('simple.wizard.modelOptional')} value={model} onChange={event => setModel(event.target.value)} placeholder={agentType === 'codex' ? 'gpt-5.6-sol' : ''} />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="setup-model" className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('simple.wizard.model')}</label>
+              <Button type="button" variant="ghost" size="sm" onClick={() => void loadModels()} disabled={modelsLoading} aria-label={t('simple.wizard.refreshModels')}><RefreshCw size={14} className={modelsLoading ? 'animate-spin' : ''} />{t('simple.wizard.refreshModels')}</Button>
+            </div>
+            <select id="setup-model" value={model} onChange={event => setModel(event.target.value)} disabled={modelsLoading && modelOptions.length === 0} className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white disabled:opacity-60">
+              <option value="">{modelsLoading ? t('simple.wizard.loadingModels') : t('simple.wizard.useAgentDefault')}</option>
+              {modelOptions.map(option => <option key={option.name} value={option.name}>{option.description ? `${option.name} — ${option.description}` : option.name}</option>)}
+            </select>
+            {modelError && <p className="text-xs text-red-500">{t('simple.wizard.modelLoadFailed')}: {modelError}</p>}
+          </div>
           <div className="flex items-start gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 p-3 text-xs text-emerald-700 dark:text-emerald-300"><ShieldCheck size={16} className="shrink-0" />{t('simple.wizard.safeModeHint')}</div>
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-3 cursor-pointer">
+            <span>
+              <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">{t('simple.wizard.showReplyFooter')}</span>
+              <span className="block text-xs text-gray-500 mt-0.5">{t('simple.wizard.showReplyFooterHint')}</span>
+            </span>
+            <input aria-label={t('simple.wizard.showReplyFooter')} type="checkbox" checked={replyFooter} onChange={event => setReplyFooter(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
+          </label>
           <WizardActions back={back} next={next} nextDisabled={!workDir.trim()} />
         </div>
       )}
