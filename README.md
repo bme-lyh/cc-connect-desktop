@@ -43,10 +43,22 @@ Send a request in your chat app and receive the local agent's answer in the same
 
 ## Windows 快速开始
 
-1. 准备构建好的 Windows 便携包并解压。
-2. 运行 `scripts/install-windows.ps1`。
+### 使用便携包（推荐）
+
+1. 从 GitHub Releases 下载 Windows 便携包并解压。
+2. 运行解压目录根部的 `install-windows.ps1`（不是源码仓库里的同名脚本）。
 3. 打开桌面或开始菜单中的 **CC-Connect**。
 4. 浏览器会打开本地管理页，按照五步向导创建第一个机器人。
+
+### 从源码安装
+
+源码仓库不会提交 `cc-connect.exe`。已安装 Node.js 与 Go 时，可在仓库根目录运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+```
+
+脚本会先构建网页和 `build\cc-connect.exe`，再完成安装。如果 Go 不在 `PATH`，可额外传入 `-GoPath "C:\path\to\go.exe"`。
 
 详细中文用法见 [docs/usage.zh-CN.md](docs/usage.zh-CN.md)。
 
@@ -66,10 +78,22 @@ This edition focuses on an easier first run:
 
 ### Windows quick start
 
-1. Extract a built Windows portable package.
-2. Run `scripts/install-windows.ps1`.
+#### Portable package (recommended)
+
+1. Download and extract the Windows portable package from GitHub Releases.
+2. Run `install-windows.ps1` from the root of the extracted package, not the similarly named script in a source checkout.
 3. Open **CC-Connect** from the Desktop or Start menu.
 4. Follow the five-step wizard in the local management page.
+
+#### Install from source
+
+The source repository does not include `cc-connect.exe`. With Node.js and Go installed, run this from the repository root:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+```
+
+The script builds the web UI and `build\cc-connect.exe` before installing. If Go is not on `PATH`, also pass `-GoPath "C:\path\to\go.exe"`.
 
 See [docs/usage.md](docs/usage.md) for detailed usage.
 
