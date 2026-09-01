@@ -227,7 +227,8 @@ var topLevelCommandHandlers = map[string]func([]string){
 	"weixin":    runWeixin,
 	"yuanbao":   runYuanbao,
 	"doctor":    runDoctor,
-	"web":       runWeb,
+	"web":       runWebCommand,
+	"desktop":   runWebCommand,
 }
 
 func main() {
@@ -324,25 +325,30 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Created default config at %s\n", configPath)
-		fmt.Println("Please edit this file to add your agent and platform credentials, then run cc-connect again.")
-		os.Exit(0)
+		fmt.Println("Open the local web setup to create your first bot: cc-connect web")
 	}
 
-	cfg, err := config.Load(configPath)
+	cfg, err := config.LoadPermissive(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config (%s): %v\n", configPath, err)
-		os.Exit(1)
+		recovered, recoverErr := config.RecoverPendingConfig(configPath)
+		if recoverErr != nil || !recovered {
+			fmt.Fprintf(os.Stderr, "Error loading config (%s): %v\n", configPath, err)
+			if recoverErr != nil {
+				fmt.Fprintf(os.Stderr, "Error restoring previous config: %v\n", recoverErr)
+			}
+			os.Exit(1)
+		}
+		fmt.Fprintln(os.Stderr, "New config was invalid; restored config.toml.previous")
+		cfg, err = config.LoadPermissive(configPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading restored config (%s): %v\n", configPath, err)
+			os.Exit(1)
+		}
 	}
 
 	config.ConfigPath = configPath
+	secretErrors := resolveSecretReferences(cfg)
 	slog.Info("config loaded", "path", configPath)
-
-	if len(cfg.Projects) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: no projects configured in %s\n", configPath)
-		fmt.Fprintln(os.Stderr, "Add at least one [[project]] section to your config.toml, or run:")
-		fmt.Fprintln(os.Stderr, "  cc-connect init")
-		os.Exit(1)
-	}
 
 	setupLogger(cfg.Log.Level, logWriter)
 
@@ -357,8 +363,20 @@ func main() {
 
 	engines := make([]*core.Engine, 0, len(cfg.Projects))
 	effectiveWorkDirs := make([]string, 0, len(cfg.Projects))
+	runtimeProjects := make([]config.ProjectConfig, 0, len(cfg.Projects))
+	runtimeProjectErrors := make(map[string]string)
 
+projectLoop:
 	for _, proj := range cfg.Projects {
+		if !config.ProjectEnabled(proj) {
+			slog.Info("project disabled; skipping runtime", "project", proj.Name)
+			continue
+		}
+		if secretErr := secretErrors[proj.Name]; secretErr != nil {
+			slog.Error("project credentials unavailable; keeping management UI online", "project", proj.Name, "error", secretErr)
+			runtimeProjectErrors[proj.Name] = "Stored credential is unavailable. Re-authorize this bot."
+			continue
+		}
 		// Inject project-level run_as_user / run_as_env into the agent's
 		// opts map so agents that support isolation can pick them up
 		// without needing their own top-level config plumbing.
@@ -374,7 +392,8 @@ func main() {
 		agent, err := core.CreateAgent(proj.Agent.Type, buildAgentOptions(cfg.DataDir, proj))
 		if err != nil {
 			slog.Error("failed to create agent", "project", proj.Name, "error", err)
-			os.Exit(1)
+			runtimeProjectErrors[proj.Name] = "Agent could not start. Check its installation and configuration."
+			continue
 		}
 
 		providerWiring := wireAgentProviders(agent, proj.Agent)
@@ -390,7 +409,12 @@ func main() {
 			p, err := core.CreatePlatform(pc.Type, opts)
 			if err != nil {
 				slog.Error("failed to create platform", "project", proj.Name, "type", pc.Type, "error", err)
-				os.Exit(1)
+				runtimeProjectErrors[proj.Name] = "Platform could not initialize. Check its credentials and settings."
+				for _, started := range platforms {
+					_ = started.Stop()
+				}
+				_ = agent.Stop()
+				continue projectLoop
 			}
 			platforms = append(platforms, p)
 		}
@@ -963,6 +987,7 @@ func main() {
 
 		engines = append(engines, engine)
 		effectiveWorkDirs = append(effectiveWorkDirs, effectiveWorkDir)
+		runtimeProjects = append(runtimeProjects, proj)
 	}
 
 	// Start cron scheduler
@@ -980,7 +1005,7 @@ func main() {
 			cronSched.SetDefaultSessionMode(cfg.Cron.SessionMode)
 		}
 		for i, e := range engines {
-			cronSched.RegisterEngine(cfg.Projects[i].Name, e)
+			cronSched.RegisterEngine(runtimeProjects[i].Name, e)
 			e.SetCronScheduler(cronSched)
 		}
 	}
@@ -1000,14 +1025,14 @@ func main() {
 			timerSched.SetDefaultSessionMode(cfg.Cron.SessionMode)
 		}
 		for i, e := range engines {
-			timerSched.RegisterEngine(cfg.Projects[i].Name, e)
+			timerSched.RegisterEngine(runtimeProjects[i].Name, e)
 			e.SetTimerScheduler(timerSched)
 		}
 	}
 
 	// Start heartbeat scheduler
 	heartbeatSched := core.NewHeartbeatScheduler(cfg.DataDir)
-	for i, proj := range cfg.Projects {
+	for i, proj := range runtimeProjects {
 		hbCfg := buildHeartbeatConfig(proj.Heartbeat)
 		if hbCfg.Enabled {
 			heartbeatSched.Register(proj.Name, hbCfg, engines[i], effectiveWorkDirs[i])
@@ -1016,16 +1041,16 @@ func main() {
 	}
 
 	var startErrors []error
-	for _, e := range engines {
+	for i, e := range engines {
 		if err := e.Start(); err != nil {
 			slog.Warn("engine start partially failed (some platforms may be unavailable)", "error", err)
 			startErrors = append(startErrors, err)
+			runtimeProjectErrors[runtimeProjects[i].Name] = "Platform connection failed. Retry or review the local log."
 		}
 	}
 	// Only exit if ALL engines failed to start
 	if len(startErrors) > 0 && len(startErrors) == len(engines) {
-		slog.Error("all engines failed to start, exiting")
-		os.Exit(1)
+		slog.Error("all engines failed to start; management UI remains available")
 	}
 
 	if cronSched != nil {
@@ -1065,8 +1090,8 @@ func main() {
 			os.Exit(1)
 		}
 		for i, e := range engines {
-			bp := bridgeSrv.NewPlatform(cfg.Projects[i].Name)
-			bridgeSrv.RegisterEngine(cfg.Projects[i].Name, e, bp)
+			bp := bridgeSrv.NewPlatform(runtimeProjects[i].Name)
+			bridgeSrv.RegisterEngine(runtimeProjects[i].Name, e, bp)
 			e.AddPlatform(bp)
 		}
 		bridgeSrv.Start()
@@ -1085,7 +1110,7 @@ func main() {
 		}
 		webhookSrv = core.NewWebhookServer(port, cfg.Webhook.Token, path)
 		for i, e := range engines {
-			webhookSrv.RegisterEngine(cfg.Projects[i].Name, e)
+			webhookSrv.RegisterEngine(runtimeProjects[i].Name, e)
 		}
 		webhookSrv.Start()
 	}
@@ -1099,7 +1124,7 @@ func main() {
 		}
 		mgmtSrv = core.NewManagementServer(port, cfg.Management.Token, cfg.Management.CORSOrigins)
 		for i, e := range engines {
-			mgmtSrv.RegisterEngine(cfg.Projects[i].Name, e)
+			mgmtSrv.RegisterEngine(runtimeProjects[i].Name, e)
 		}
 		if cronSched != nil {
 			mgmtSrv.SetCronScheduler(cronSched)
@@ -1252,6 +1277,7 @@ func main() {
 			core.SetPresetsURL(cfg.ProviderPresetsURL)
 		}
 		mgmtSrv.SetListCCSwitchProviders(listCCSwitchProvidersForWeb)
+		wireSimpleSetup(mgmtSrv, runtimeProjects, runtimeProjectErrors)
 		mgmtSrv.Start()
 	}
 
@@ -1279,14 +1305,14 @@ func main() {
 		dirHistory := core.NewDirHistory(cfg.DataDir)
 
 		for i, e := range engines {
-			apiSrv.RegisterEngine(cfg.Projects[i].Name, e)
+			apiSrv.RegisterEngine(runtimeProjects[i].Name, e)
 			e.SetRelayManager(relayMgr)
 			e.SetDirHistory(dirHistory)
 
 			// Ensure initial work_dir is in history
 			if initWorkDir := effectiveWorkDirs[i]; initWorkDir != "" {
-				if !dirHistory.Contains(cfg.Projects[i].Name, initWorkDir) {
-					dirHistory.Add(cfg.Projects[i].Name, initWorkDir)
+				if !dirHistory.Contains(runtimeProjects[i].Name, initWorkDir) {
+					dirHistory.Add(runtimeProjects[i].Name, initWorkDir)
 				}
 			}
 		}
@@ -1300,6 +1326,9 @@ func main() {
 	}
 
 	slog.Info("cc-connect is running", "projects", len(engines))
+	if err := config.ClearApplyPending(configPath); err != nil {
+		slog.Warn("could not clear config apply marker", "error", err)
+	}
 
 	// After startup, check if we were restarted and queue the success
 	// notification. The engine dispatches it on the first OnPlatformReady
@@ -1559,36 +1588,17 @@ func bootstrapConfig(path string) error {
 		return err
 	}
 
-	const tmpl = `# cc-connect configuration
+	tmpl := fmt.Sprintf(`# cc-connect configuration
 # Docs: https://github.com/chenhg5/cc-connect
 
 [log]
 level = "info"
 
-[[projects]]
-name = "my-project"
-
-[projects.agent]
-type = "claudecode"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", or "iflow"
-
-[projects.agent.options]
-work_dir = "/path/to/your/project"
-mode = "default"
-# model = "claude-sonnet-4-20250514"
-
-# --- Choose at least one platform below ---
-
-# Feishu / Lark (WebSocket, no public IP needed)
-[[projects.platforms]]
-type = "feishu"
-
-[projects.platforms.options]
-app_id = "your-feishu-app-id"
-app_secret = "your-feishu-app-secret"
-
-# For more platforms (DingTalk, Telegram, Slack, Discord, LINE, WeChat Work)
-# see: https://github.com/chenhg5/cc-connect/blob/main/config.example.toml
-`
+[management]
+enabled = true
+port = 9820
+token = %q
+`, core.GenerateToken(24))
 	return os.WriteFile(path, []byte(tmpl), 0o644)
 }
 

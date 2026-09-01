@@ -1,8 +1,11 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import Layout from '@/components/Layout/Layout';
 import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
+import BotList from '@/pages/Bots/BotList';
+import SetupWizard from '@/pages/Setup/SetupWizard';
+import { getSetupStatus } from '@/api/bots';
 import ProjectList from '@/pages/Projects/ProjectList';
 import ProjectDetail from '@/pages/Projects/ProjectDetail';
 import ChatList from '@/pages/Chat/ChatList';
@@ -18,14 +21,33 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function SetupGate({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    getSetupStatus()
+      .then(status => {
+        if (status.first_run && location.pathname !== '/setup') navigate('/setup', { replace: true });
+      })
+      .catch(() => undefined)
+      .finally(() => setChecking(false));
+  }, [location.pathname, navigate]);
+
+  if (checking) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>;
+  return <>{children}</>;
+}
+
 export default function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Dashboard />} />
+      <Route path="/setup" element={<ProtectedRoute><SetupWizard /></ProtectedRoute>} />
+      <Route element={<ProtectedRoute><SetupGate><Layout /></SetupGate></ProtectedRoute>}>
+        <Route index element={<BotList />} />
         <Route path="projects" element={<ProjectList />} />
         <Route path="projects/:name" element={<ProjectDetail />} />
         <Route path="providers" element={<ProviderList />} />

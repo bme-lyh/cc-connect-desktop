@@ -70,6 +70,13 @@ type ManagementServer struct {
 
 	// cc-switch migration callback
 	listCCSwitchProviders func() ([]CCSwitchProviderInfo, error)
+
+	getSetupStatus  func() (SetupStatus, error)
+	getSetupCatalog func() SetupCatalog
+	listBots        func() ([]BotSummary, error)
+	upsertBot       func(BotUpsertRequest) (BotSummary, error)
+	setBotEnabled   func(string, bool) error
+	removeBot       func(string) error
 }
 
 // NewManagementServer creates a new management API server.
@@ -136,6 +143,7 @@ func (m *ManagementServer) SetSaveGlobalSettings(fn func(map[string]any) error) 
 type GlobalProviderInfo struct {
 	Name       string            `json:"name"`
 	APIKey     string            `json:"api_key,omitempty"`
+	APIKeySet  bool              `json:"api_key_set,omitempty"`
 	BaseURL    string            `json:"base_url,omitempty"`
 	Model      string            `json:"model,omitempty"`
 	Thinking   string            `json:"thinking,omitempty"`
@@ -145,10 +153,10 @@ type GlobalProviderInfo struct {
 		Model string `json:"model"`
 		Alias string `json:"alias,omitempty"`
 	} `json:"models,omitempty"`
-	Endpoints       map[string]string              `json:"endpoints,omitempty"`
-	AgentModels     map[string]string              `json:"agent_models,omitempty"`
-	AgentModelLists map[string][]GlobalModelEntry   `json:"agent_model_lists,omitempty"`
-	Codex           *GlobalCodexConfig              `json:"codex,omitempty"`
+	Endpoints       map[string]string             `json:"endpoints,omitempty"`
+	AgentModels     map[string]string             `json:"agent_models,omitempty"`
+	AgentModelLists map[string][]GlobalModelEntry `json:"agent_model_lists,omitempty"`
+	Codex           *GlobalCodexConfig            `json:"codex,omitempty"`
 }
 
 // GlobalModelEntry is a model entry inside AgentModelLists.
@@ -185,6 +193,22 @@ func (m *ManagementServer) SetListCCSwitchProviders(fn func() ([]CCSwitchProvide
 	m.listCCSwitchProviders = fn
 }
 
+func (m *ManagementServer) SetSimpleSetupCallbacks(
+	status func() (SetupStatus, error),
+	catalog func() SetupCatalog,
+	list func() ([]BotSummary, error),
+	upsert func(BotUpsertRequest) (BotSummary, error),
+	setEnabled func(string, bool) error,
+	remove func(string) error,
+) {
+	m.getSetupStatus = status
+	m.getSetupCatalog = catalog
+	m.listBots = list
+	m.upsertBot = upsert
+	m.setBotEnabled = setEnabled
+	m.removeBot = remove
+}
+
 // CCSwitchProviderInfo represents a provider read from the cc-switch database.
 type CCSwitchProviderInfo struct {
 	Name      string `json:"name"`
@@ -200,7 +224,7 @@ func (m *ManagementServer) Start() {
 	handler := m.buildHandler(mux)
 
 	m.server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", m.port),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", m.port),
 		Handler: handler,
 	}
 	go func() {
@@ -216,6 +240,7 @@ func (m *ManagementServer) buildHandler(mux *http.ServeMux) http.Handler {
 
 	// System
 	mux.HandleFunc(prefix+"/status", m.wrap(m.handleStatus))
+	mux.HandleFunc(prefix+"/ready", m.wrap(m.handleReady))
 	mux.HandleFunc(prefix+"/restart", m.wrap(m.handleRestart))
 	mux.HandleFunc(prefix+"/reload", m.wrap(m.handleReload))
 	mux.HandleFunc(prefix+"/config", m.wrap(m.handleConfig))
@@ -223,6 +248,10 @@ func (m *ManagementServer) buildHandler(mux *http.ServeMux) http.Handler {
 
 	// Agents & Platforms (registry)
 	mux.HandleFunc(prefix+"/agents", m.wrap(m.handleAgents))
+	mux.HandleFunc(prefix+"/setup/status", m.wrap(m.handleSimpleSetupStatus))
+	mux.HandleFunc(prefix+"/setup/catalog", m.wrap(m.handleSimpleSetupCatalog))
+	mux.HandleFunc(prefix+"/bots", m.wrap(m.handleBots))
+	mux.HandleFunc(prefix+"/bots/", m.wrap(m.handleBotRoutes))
 
 	// Projects
 	mux.HandleFunc(prefix+"/projects", m.wrap(m.handleProjects))
@@ -412,9 +441,9 @@ func (m *ManagementServer) handleStatus(w http.ResponseWriter, r *http.Request) 
 				info := ph.PlatformHealth()
 				if info.Degraded {
 					entry := map[string]any{
-						"name":    info.Name,
-						"reason":  info.DegradedReason,
-						"since":   info.DegradedSince,
+						"name":   info.Name,
+						"reason": info.DegradedReason,
+						"since":  info.DegradedSince,
 					}
 					degradedEntries = append(degradedEntries, entry)
 				}
@@ -444,7 +473,6 @@ func (m *ManagementServer) handleStatus(w http.ResponseWriter, r *http.Request) 
 			"enabled":   true,
 			"port":      m.bridgeServer.port,
 			"path":      m.bridgeServer.path,
-			"token":     m.bridgeServer.token,
 			"token_set": m.bridgeServer.token != "",
 		}
 	}
@@ -517,7 +545,23 @@ func (m *ManagementServer) handleConfig(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	_, _ = w.Write([]byte(redactConfigText(string(data))))
+}
+
+func redactConfigText(content string) string {
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.ToLower(strings.TrimSpace(parts[0]))
+		sensitive := strings.Contains(key, "token") || strings.Contains(key, "secret") || strings.Contains(key, "password") || strings.Contains(key, "api_key") || strings.Contains(key, "credential")
+		if sensitive {
+			lines[i] = parts[0] + "= \"***\""
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m *ManagementServer) handleGlobalSettings(w http.ResponseWriter, r *http.Request) {
@@ -1730,6 +1774,16 @@ func (m *ManagementServer) handleGlobalProviders(w http.ResponseWriter, r *http.
 			mgmtError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		for i := range providers {
+			providers[i].APIKeySet = providers[i].APIKey != ""
+			providers[i].APIKey = ""
+			for key := range providers[i].Env {
+				upper := strings.ToUpper(key)
+				if strings.Contains(upper, "KEY") || strings.Contains(upper, "TOKEN") || strings.Contains(upper, "SECRET") || strings.Contains(upper, "PASSWORD") {
+					providers[i].Env[key] = "***"
+				}
+			}
+		}
 		mgmtJSON(w, http.StatusOK, map[string]any{"providers": providers})
 
 	case http.MethodPost:
@@ -1942,10 +1996,10 @@ func (m *ManagementServer) handleCCSwitchProviders(w http.ResponseWriter, r *htt
 // applying per-agent-type overrides for base_url, model, and models.
 func resolveGlobalProviderForAgent(g GlobalProviderInfo, agentType string) ProviderConfig {
 	pc := ProviderConfig{
-		Name:   g.Name,
-		APIKey: g.APIKey,
+		Name:    g.Name,
+		APIKey:  g.APIKey,
 		BaseURL: g.BaseURL,
-		Model:  g.Model,
+		Model:   g.Model,
 	}
 	if ep, ok := g.Endpoints[agentType]; ok && ep != "" {
 		pc.BaseURL = ep

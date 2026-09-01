@@ -40,6 +40,9 @@
 </p>
 
 
+> [!NOTE]
+> This branch is a simple desktop derivative that stays compatible with upstream cc-connect. It adds zero-configuration startup, a first-run wizard, bot cards, Windows Credential Manager storage, and portable Windows packaging. The original MIT license and third-party notices remain in force.
+
 ## ❤️ Sponsor
 
 > Want to appear here? Contact: chg80333@gmail.com | WeChat: mongorz
@@ -281,7 +284,7 @@ High-level view of what each **built-in platform** can do in cc-connect.
 
 ## 📋 Prerequisites
 
-> **Install in this exact order** — cc-connect is a bridge for local AI coding agents, so the agent CLI must be installed and authenticated *before* cc-connect starts. Skipping ahead will cause `cc-connect` to exit with `claudecode: claude CLI not found in PATH` (or similar for your chosen agent), and the Web UI on `:9820` will never come up.
+> The management UI can now start without an agent or platform configuration. Install and authenticate an agent before completing the first bot in the wizard; missing tools are shown as actionable diagnostics instead of terminating the UI.
 
 ### 1️⃣ Install your AI Agent CLI
 
@@ -340,10 +343,12 @@ brew install cc-connect
 # Or download a binary from https://github.com/chenhg5/cc-connect/releases
 ```
 
+On Windows, the portable release is recommended. Extract it and run `install-windows.ps1`; it installs per-user files, a hidden scheduled task, and Desktop/Start Menu shortcuts. Go and Node are not required for the packaged release.
+
 ### 4️⃣ Start cc-connect and open the Web UI
 
 ```bash
-cc-connect             # starts the service; first run auto-creates ~/.cc-connect/config.toml
+cc-connect web         # starts the local service if needed and opens the browser
 ```
 
 On first launch, cc-connect prints something like:
@@ -354,11 +359,11 @@ Web admin:  http://localhost:9820
 
 Open that URL in your browser. If `9820` is already in use, pass `--web-port 9821` or set `web_port` in `config.toml`.
 
-> **Note:** `cc-connect web` *only* opens the browser and the config UI — it does **not** start the service. You still need `cc-connect` running in another terminal.
+The first run creates only a local management token and opens the five-step setup wizard. Starting `cc-connect` directly remains supported and keeps the management UI running even when no bot exists.
 
 ### 5️⃣ Configure platform bot tokens in the Web UI
 
-In the Web UI, create a project, then add at least one platform (Feishu / Telegram / Discord / Slack / DingTalk / WeChat Work / QQ / LINE / Weixin) and paste the bot token from that platform's developer console. Save and cc-connect will hot-reload.
+Create a bot in the wizard: choose Codex or Pi, a workspace, permission mode, and an IM platform. Secrets are stored in the operating-system credential store; the TOML file contains only `secret://cc-connect/...` references. Advanced projects and all existing CLI commands remain available.
 
 That's it — send a message to your bot and cc-connect will relay it to your local agent.
 

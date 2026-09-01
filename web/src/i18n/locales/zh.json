@@ -1,5 +1,6 @@
 {
   "nav": {
+    "bots": "机器人",
     "dashboard": "概览",
     "projects": "项目",
     "providers": "服务商",
@@ -280,7 +281,11 @@
     "cloudWebWsHint": "若已填写 base URL 可留空，默认 /cloud-web/ws",
     "cloudWebBaseUrlHint": "long poll 必填；WebSocket 可填此项或下方 WebSocket 地址",
     "eventsPath": "事件拉取路径（长轮询）",
-    "sendPath": "消息发送路径（出站 API）"
+    "sendPath": "消息发送路径（出站 API）",
+    "userId": "用户 ID",
+    "subscription": "订阅",
+    "credentialsFile": "凭据文件",
+    "wpsSid": "WPS SID"
   },
   "chat": {
     "noChats": "暂无项目",
@@ -424,6 +429,47 @@
     "free": "免费",
     "freemium": "免费增值",
     "paid": "付费"
+  },
+  "simple": {
+    "myBots": "我的机器人",
+    "botSubtitle": "一个机器人对应一个 Agent、一个工作区和一个平台账号。",
+    "addBot": "添加机器人",
+    "noBots": "还没有机器人，请创建第一个机器人。",
+    "start": "启动",
+    "stop": "停止",
+    "reconnect": "重连",
+    "advanced": "高级设置",
+    "advancedProjectsHint": "高级运行项目，包括旧版多平台配置。",
+    "confirmRemove": "从配置中移除 {{name}}？会话和凭据将保留。",
+    "state": { "running": "运行中", "stopped": "已停止", "error": "需要处理", "applying": "正在应用" },
+    "wizard": {
+      "detectTitle": "选择编程 Agent",
+      "detectDescription": "配置前会在本机检测 Codex 和 Pi。",
+      "advancedAgent": "可在高级模式使用",
+      "showAdvanced": "显示其他 Agent",
+      "hideAdvanced": "收起其他 Agent",
+      "nameTitle": "给机器人命名",
+      "nameDescription": "使用便于识别该平台账号的简短名称。",
+      "botName": "机器人名称",
+      "botNamePlaceholder": "开发助手",
+      "agentTitle": "Agent 与工作区",
+      "agentDescription": "选择本地目录和安全的执行默认值。",
+      "permissionMode": "权限模式",
+      "reasoningEffort": "推理强度",
+      "modelOptional": "模型（可选）",
+      "safeModeHint": "简洁向导不会启用无限制或 yolo 权限。",
+      "platformTitle": "连接 IM 平台",
+      "platformDescription": "所有已编译平台都在这里；不同账号请创建不同机器人。",
+      "qrSetup": "扫码连接",
+      "formSetup": "填写凭据",
+      "scanQR": "请使用手机 App 扫码并确认授权。",
+      "authorized": "已收到授权",
+      "finishTitle": "确认并启动",
+      "finishDescription": "凭据将保存到系统凭据库。",
+      "platform": "平台",
+      "restartNotice": "保存后会自动应用配置并重启本地服务。",
+      "saveStart": "保存并启动"
+    }
   },
   "theme": {
     "light": "浅色",

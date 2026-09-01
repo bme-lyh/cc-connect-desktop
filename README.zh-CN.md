@@ -40,6 +40,9 @@
 </p>
 
 
+> [!NOTE]
+> 当前分支是在保持上游 cc-connect 兼容性的基础上制作的简洁桌面派生版，新增零配置启动、首次向导、机器人卡片、Windows 凭据管理器和便携包。原 MIT 许可证及第三方版权声明继续有效。
+
 ## ❤️ 赞助
 
 > 想在这里展示？联系：chg80333@gmail.com | 微信：mongorz
@@ -280,7 +283,7 @@
 
 ## 📋 准备工作
 
-> **请严格按照以下顺序安装** — cc-connect 是本地 AI 编程 Agent 的桥接工具，因此对应的 Agent CLI 必须先安装并完成登录认证，之后 cc-connect 才能正常启动。如果跳过前面的步骤直接启动 cc-connect，进程会直接退出并报错 `claudecode: claude CLI not found in PATH`（其他 Agent 报错类似），Web UI 在 `:9820` 也就无从访问。
+> 管理界面现在可以在没有 Agent 或平台配置时直接启动。完成向导中的第一个机器人前，再安装并登录 Agent 即可；工具缺失会显示明确诊断，不再导致 GUI 退出。
 
 ### 1️⃣ 安装 AI Agent CLI
 
@@ -339,10 +342,12 @@ brew install cc-connect
 # 也可以从 https://github.com/chenhg5/cc-connect/releases 直接下载二进制
 ```
 
+Windows 推荐使用便携包：解压后运行 `install-windows.ps1`，脚本会按当前用户安装程序、隐藏后台计划任务，以及桌面和开始菜单快捷方式。便携包用户不需要安装 Go 或 Node。
+
 ### 4️⃣ 启动 cc-connect 并打开 Web UI
 
 ```bash
-cc-connect             # 启动服务；首次运行会自动生成 ~/.cc-connect/config.toml
+cc-connect web         # 必要时启动本地服务，并打开浏览器
 ```
 
 首次启动时，cc-connect 会打印类似：
@@ -353,11 +358,11 @@ Web admin:  http://localhost:9820
 
 在浏览器里打开该地址。如果 `9820` 已被占用，可以传 `--web-port 9821` 或在 `config.toml` 里设置 `web_port`。
 
-> **注意：** `cc-connect web` *只* 打开浏览器和配置界面，并**不会**启动服务本身。仍需要在另一个终端里跑 `cc-connect`。
+首次运行只生成本地管理令牌，并直接打开五步配置向导。仍可直接运行 `cc-connect`；即使尚未创建机器人，管理界面也会持续运行。
 
 ### 5️⃣ 在 Web UI 里配置平台 Bot Token
 
-在 Web UI 里新建一个项目，然后添加至少一个平台（飞书 / Telegram / Discord / Slack / 钉钉 / 企业微信 / QQ / LINE / 微信 ilink），把该平台开发者后台的 Bot Token 粘贴进去。保存后 cc-connect 会热加载。
+在向导中创建机器人：选择 Codex 或 Pi、工作目录、权限模式和 IM 平台。Secret 保存到操作系统凭据库，TOML 中只写入 `secret://cc-connect/...` 引用；原高级项目和全部 CLI 命令仍保留。
 
 至此完成 — 给你的 Bot 发条消息，cc-connect 就会把它转给本地的 Agent。
 

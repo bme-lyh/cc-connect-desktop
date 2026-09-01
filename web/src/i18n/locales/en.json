@@ -1,5 +1,6 @@
 {
   "nav": {
+    "bots": "Bots",
     "dashboard": "Dashboard",
     "projects": "Projects",
     "providers": "Providers",
@@ -280,7 +281,11 @@
     "cloudWebWsHint": "Optional if base URL is set; defaults to /cloud-web/ws",
     "cloudWebBaseUrlHint": "Required for long poll; for WebSocket, use this or WebSocket URL below",
     "eventsPath": "Events path (long poll)",
-    "sendPath": "Send path (outbound API)"
+    "sendPath": "Send path (outbound API)",
+    "userId": "User ID",
+    "subscription": "Subscription",
+    "credentialsFile": "Credentials file",
+    "wpsSid": "WPS SID"
   },
   "chat": {
     "noChats": "No projects yet",
@@ -424,6 +429,47 @@
     "free": "Free",
     "freemium": "Freemium",
     "paid": "Paid"
+  },
+  "simple": {
+    "myBots": "My bots",
+    "botSubtitle": "One bot connects one agent, workspace, and messaging account.",
+    "addBot": "Add bot",
+    "noBots": "No bots yet. Create your first bot to get started.",
+    "start": "Start",
+    "stop": "Stop",
+    "reconnect": "Reconnect",
+    "advanced": "Advanced settings",
+    "advancedProjectsHint": "Advanced runtime projects, including legacy multi-platform configurations.",
+    "confirmRemove": "Remove {{name}} from the configuration? Sessions and credentials will be retained.",
+    "state": { "running": "Running", "stopped": "Stopped", "error": "Needs attention", "applying": "Applying" },
+    "wizard": {
+      "detectTitle": "Choose your coding agent",
+      "detectDescription": "Codex and Pi are checked locally before configuration.",
+      "advancedAgent": "Available in advanced mode",
+      "showAdvanced": "Show other agents",
+      "hideAdvanced": "Hide other agents",
+      "nameTitle": "Name your bot",
+      "nameDescription": "Use a short name that identifies this messaging account.",
+      "botName": "Bot name",
+      "botNamePlaceholder": "Development assistant",
+      "agentTitle": "Agent and workspace",
+      "agentDescription": "Choose the local directory and safe execution defaults.",
+      "permissionMode": "Permission mode",
+      "reasoningEffort": "Reasoning effort",
+      "modelOptional": "Model (optional)",
+      "safeModeHint": "Unrestricted or yolo access is never enabled by the simple wizard.",
+      "platformTitle": "Connect a messaging platform",
+      "platformDescription": "Every compiled platform is available here; add more bots for more accounts.",
+      "qrSetup": "Scan QR code",
+      "formSetup": "Enter credentials",
+      "scanQR": "Scan with the mobile app and confirm authorization.",
+      "authorized": "Authorization received",
+      "finishTitle": "Review and start",
+      "finishDescription": "Credentials are stored in the system credential manager.",
+      "platform": "Platform",
+      "restartNotice": "Saving applies the configuration and restarts the local service automatically.",
+      "saveStart": "Save and start"
+    }
   },
   "theme": {
     "light": "Light",

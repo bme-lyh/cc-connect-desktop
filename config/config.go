@@ -469,10 +469,14 @@ type ReferenceConfig struct {
 
 // ProjectConfig binds one agent (with a specific work_dir) to one or more platforms.
 type ProjectConfig struct {
-	Name    string `toml:"name"`
-	Mode    string `toml:"mode,omitempty"`     // "" or "multi-workspace"
-	BaseDir string `toml:"base_dir,omitempty"` // parent dir for workspaces
-	SkipGit *bool  `toml:"skip_git,omitempty"`
+	Name        string `toml:"name"`
+	ID          string `toml:"id,omitempty"`
+	DisplayName string `toml:"display_name,omitempty"`
+	Enabled     *bool  `toml:"enabled,omitempty"`
+	SimpleMode  *bool  `toml:"simple_mode,omitempty"`
+	Mode        string `toml:"mode,omitempty"`     // "" or "multi-workspace"
+	BaseDir     string `toml:"base_dir,omitempty"` // parent dir for workspaces
+	SkipGit     *bool  `toml:"skip_git,omitempty"`
 	// WorkspaceInitAllowLocalPaths allows /workspace init and the conversational
 	// init flow to bind existing local directories. Default false keeps init
 	// limited to git URLs; use /workspace bind or /workspace route for explicit
@@ -1021,6 +1025,9 @@ func (c *Config) validateInternal(permissive bool) error {
 		return fmt.Errorf("config: relay.visibility must be \"full\", \"summary\", or \"none\"")
 	}
 	if len(c.Projects) == 0 {
+		if permissive {
+			return nil
+		}
 		return fmt.Errorf("config: at least one [[projects]] entry is required")
 	}
 	for i, proj := range c.Projects {
@@ -1488,6 +1495,14 @@ func UpdateGlobalProvider(name string, provider ProviderConfig) error {
 	for i := range cfg.Providers {
 		if cfg.Providers[i].Name == name {
 			provider.Name = name // name is immutable in update
+			if provider.APIKey == "" || provider.APIKey == "***" {
+				provider.APIKey = cfg.Providers[i].APIKey
+			}
+			for key, value := range provider.Env {
+				if value == "***" {
+					provider.Env[key] = cfg.Providers[i].Env[key]
+				}
+			}
 			cfg.Providers[i] = provider
 			return saveConfig(cfg)
 		}
@@ -1572,7 +1587,21 @@ func saveConfig(cfg *Config) error {
 		os.Remove(tmpPath)
 		return err
 	}
-	return os.Rename(tmpPath, ConfigPath)
+	return commitConfigTemp(tmpPath)
+}
+
+func commitConfigTemp(tmpPath string) error {
+	if current, err := os.ReadFile(ConfigPath); err == nil {
+		if err := os.WriteFile(ConfigPath+".previous", current, 0o600); err != nil {
+			return fmt.Errorf("backup previous config: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("read previous config: %w", err)
+	}
+	if err := os.Rename(tmpPath, ConfigPath); err != nil {
+		return fmt.Errorf("replace config: %w", err)
+	}
+	return nil
 }
 
 // formatTOML post-processes raw TOML encoder output to improve readability:
@@ -3693,7 +3722,200 @@ func writeRawConfig(content string) error {
 		os.Remove(tmpPath)
 		return err
 	}
-	return os.Rename(tmpPath, ConfigPath)
+	return commitConfigTemp(tmpPath)
+}
+
+// ProjectEnabled reports whether a project should be started. The nil value
+// preserves the legacy behaviour where every project is enabled.
+func ProjectEnabled(project ProjectConfig) bool {
+	return project.Enabled == nil || *project.Enabled
+}
+
+// ListProjectConfigs returns the persisted project list without resolving
+// environment variables or secret references. Callers must never expose the
+// Options maps directly through an API.
+func ListProjectConfigs() ([]ProjectConfig, error) {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if ConfigPath == "" {
+		return nil, fmt.Errorf("config path not set")
+	}
+	data, err := os.ReadFile(ConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("read config: %w", err)
+	}
+	var cfg Config
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
+	}
+	return cfg.Projects, nil
+}
+
+// UpsertSimpleBot creates or replaces a simple-mode project. A simple bot is
+// intentionally constrained to one agent and one platform account.
+func UpsertSimpleBot(bot ProjectConfig) error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if ConfigPath == "" {
+		return fmt.Errorf("config path not set")
+	}
+	if strings.TrimSpace(bot.ID) == "" {
+		return fmt.Errorf("bot id is required")
+	}
+	if strings.TrimSpace(bot.Name) == "" || strings.TrimSpace(bot.DisplayName) == "" {
+		return fmt.Errorf("bot name and display name are required")
+	}
+	if len(bot.Platforms) != 1 {
+		return fmt.Errorf("simple bot requires exactly one platform")
+	}
+	simple := true
+	if bot.SimpleMode == nil {
+		bot.SimpleMode = &simple
+	}
+	enabled := true
+	if bot.Enabled == nil {
+		bot.Enabled = &enabled
+	}
+	data, err := os.ReadFile(ConfigPath)
+	if err != nil {
+		return fmt.Errorf("read config: %w", err)
+	}
+	var cfg Config
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("parse config: %w", err)
+	}
+	replaced := false
+	for i := range cfg.Projects {
+		if cfg.Projects[i].ID == bot.ID {
+			cfg.Projects[i] = bot
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		for _, existing := range cfg.Projects {
+			if existing.Name == bot.Name {
+				return fmt.Errorf("project name %q already exists", bot.Name)
+			}
+		}
+		cfg.Projects = append(cfg.Projects, bot)
+	}
+	if err := cfg.validatePermissive(); err != nil {
+		return err
+	}
+	if err := saveConfig(&cfg); err != nil {
+		return err
+	}
+	return MarkApplyPending(ConfigPath)
+}
+
+// SetSimpleBotEnabled updates the persisted enabled flag without removing
+// credentials or session data.
+func SetSimpleBotEnabled(id string, enabled bool) error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if ConfigPath == "" {
+		return fmt.Errorf("config path not set")
+	}
+	data, err := os.ReadFile(ConfigPath)
+	if err != nil {
+		return fmt.Errorf("read config: %w", err)
+	}
+	var cfg Config
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("parse config: %w", err)
+	}
+	for i := range cfg.Projects {
+		if cfg.Projects[i].ID == id {
+			cfg.Projects[i].Enabled = &enabled
+			if err := saveConfig(&cfg); err != nil {
+				return err
+			}
+			return MarkApplyPending(ConfigPath)
+		}
+	}
+	return fmt.Errorf("bot %q not found", id)
+}
+
+// RemoveSimpleBot removes only the configuration entry. Session data and
+// credentials are deliberately retained for recoverability.
+func RemoveSimpleBot(id string) error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if ConfigPath == "" {
+		return fmt.Errorf("config path not set")
+	}
+	data, err := os.ReadFile(ConfigPath)
+	if err != nil {
+		return fmt.Errorf("read config: %w", err)
+	}
+	var cfg Config
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("parse config: %w", err)
+	}
+	for i := range cfg.Projects {
+		if cfg.Projects[i].ID == id {
+			cfg.Projects = append(cfg.Projects[:i], cfg.Projects[i+1:]...)
+			if err := saveConfig(&cfg); err != nil {
+				return err
+			}
+			return MarkApplyPending(ConfigPath)
+		}
+	}
+	return fmt.Errorf("bot %q not found", id)
+}
+
+func applyMarkerPath(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	return abs + ".apply-pending", nil
+}
+
+// MarkApplyPending records that the next process start should validate the new
+// config and fall back to config.toml.previous if parsing fails.
+func MarkApplyPending(path string) error {
+	marker, err := applyMarkerPath(path)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(marker, []byte("pending\n"), 0o600)
+}
+
+// RecoverPendingConfig restores the single previous config only when a managed
+// apply is pending. It never treats an arbitrary user edit as an apply failure.
+func RecoverPendingConfig(path string) (bool, error) {
+	marker, err := applyMarkerPath(path)
+	if err != nil {
+		return false, err
+	}
+	if _, err := os.Stat(marker); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	previous := path + ".previous"
+	data, err := os.ReadFile(previous)
+	if err != nil {
+		return false, fmt.Errorf("read previous config: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return false, fmt.Errorf("restore previous config: %w", err)
+	}
+	return true, nil
+}
+
+func ClearApplyPending(path string) error {
+	marker, err := applyMarkerPath(path)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(marker); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 // FormatConfigFile reads the config file at the given path, formats it, and
@@ -3974,6 +4196,41 @@ func EnableWebAdmin(mgmtToken, bridgeToken string) (*WebSetupResult, error) {
 		BridgeToken:     cfg.Bridge.Token,
 		AlreadyEnabled:  false,
 	}, nil
+}
+
+// EnsureManagement enables only the loopback management UI. Unlike the legacy
+// EnableWebAdmin helper it does not enable the external bridge or wildcard CORS.
+func EnsureManagement(token string) (int, string, error) {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if ConfigPath == "" {
+		return 0, "", fmt.Errorf("config path not set")
+	}
+	data, err := os.ReadFile(ConfigPath)
+	if err != nil {
+		return 0, "", fmt.Errorf("read config: %w", err)
+	}
+	var cfg Config
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return 0, "", fmt.Errorf("parse config: %w", err)
+	}
+	enabled := true
+	changed := cfg.Management.Enabled == nil || !*cfg.Management.Enabled
+	cfg.Management.Enabled = &enabled
+	if cfg.Management.Port <= 0 {
+		cfg.Management.Port = 9820
+		changed = true
+	}
+	if strings.TrimSpace(cfg.Management.Token) == "" {
+		cfg.Management.Token = token
+		changed = true
+	}
+	if changed {
+		if err := saveConfig(&cfg); err != nil {
+			return 0, "", err
+		}
+	}
+	return cfg.Management.Port, cfg.Management.Token, nil
 }
 
 func orDefault(v, d int) int {

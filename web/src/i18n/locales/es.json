@@ -1,5 +1,6 @@
 {
   "nav": {
+    "bots": "Bots",
     "dashboard": "Panel",
     "projects": "Proyectos",
     "providers": "Proveedores",
@@ -280,7 +281,11 @@
     "cloudWebWsHint": "Opcional si hay base URL; predeterminado /cloud-web/ws",
     "cloudWebBaseUrlHint": "Obligatorio para long poll; para WebSocket, use esto o la URL de WebSocket abajo",
     "eventsPath": "Ruta de eventos (long poll)",
-    "sendPath": "Ruta de envío (API saliente)"
+    "sendPath": "Ruta de envío (API saliente)",
+    "userId": "ID de usuario",
+    "subscription": "Suscripción",
+    "credentialsFile": "Archivo de credenciales",
+    "wpsSid": "SID de WPS"
   },
   "chat": {
     "noChats": "No hay proyectos",
@@ -424,6 +429,13 @@
     "free": "Gratis",
     "freemium": "Freemium",
     "paid": "De pago"
+  },
+  "simple": {
+    "myBots": "Mis bots", "botSubtitle": "Un bot conecta un agente, un espacio de trabajo y una cuenta de mensajería.", "addBot": "Añadir bot", "noBots": "Aún no hay bots. Crea el primero para comenzar.", "start": "Iniciar", "stop": "Detener", "reconnect": "Reconectar", "advanced": "Ajustes avanzados", "advancedProjectsHint": "Proyectos avanzados, incluidas configuraciones antiguas multiplataforma.", "confirmRemove": "¿Quitar {{name}} de la configuración? Se conservarán las sesiones y credenciales.",
+    "state": { "running": "En ejecución", "stopped": "Detenido", "error": "Requiere atención", "applying": "Aplicando" },
+    "wizard": {
+      "detectTitle": "Elige el agente de programación", "detectDescription": "Codex y Pi se comprueban localmente antes de configurar.", "advancedAgent": "Disponible en modo avanzado", "showAdvanced": "Mostrar otros agentes", "hideAdvanced": "Ocultar otros agentes", "nameTitle": "Pon nombre al bot", "nameDescription": "Usa un nombre corto que identifique la cuenta.", "botName": "Nombre del bot", "botNamePlaceholder": "Asistente de desarrollo", "agentTitle": "Agente y espacio de trabajo", "agentDescription": "Elige el directorio local y valores seguros.", "permissionMode": "Modo de permisos", "reasoningEffort": "Nivel de razonamiento", "modelOptional": "Modelo (opcional)", "safeModeHint": "El asistente sencillo nunca activa acceso ilimitado ni yolo.", "platformTitle": "Conecta una plataforma IM", "platformDescription": "Aquí están todas las plataformas compiladas.", "qrSetup": "Escanear QR", "formSetup": "Introducir credenciales", "scanQR": "Escanea con la aplicación móvil y confirma.", "authorized": "Autorización recibida", "finishTitle": "Revisar e iniciar", "finishDescription": "Las credenciales se guardan en el almacén del sistema.", "platform": "Plataforma", "restartNotice": "Al guardar se aplica la configuración y se reinicia el servicio local.", "saveStart": "Guardar e iniciar"
+    }
   },
   "theme": {
     "light": "Claro",

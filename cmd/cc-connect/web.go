@@ -1,30 +1,42 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/chenhg5/cc-connect/config"
 	"github.com/chenhg5/cc-connect/core"
 )
 
-func runWeb(args []string) {
+func runWebCommand(args []string) {
+	if err := runWeb(args); err != nil {
+		fmt.Fprintf(os.Stderr, "cc-connect desktop: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runWeb(args []string) error {
 	configPath := resolveConfigPath("")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Config file not found: %s\nRun cc-connect first to create a default config.\n", configPath)
-		os.Exit(1)
+		if err := bootstrapConfig(configPath); err != nil {
+			return fmt.Errorf("create config: %w", err)
+		}
+		fmt.Printf("Created minimal config at %s\n", configPath)
 	}
 
 	// Use LoadPermissive so `cc-connect web` works even before any platforms
 	// are configured (e.g. during initial setup via the Web Admin UI).
 	cfg, err := config.LoadPermissive(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("load config: %w", err)
 	}
 	config.ConfigPath = configPath
 
@@ -35,23 +47,34 @@ func runWeb(args []string) {
 	}
 	token := cfg.Management.Token
 
-	if !mgmtEnabled {
-		fmt.Println("Web admin is not enabled. Configuring...")
-
-		mgmtToken := core.GenerateToken(16)
-		bridgeToken := core.GenerateToken(16)
-		result, err := config.EnableWebAdmin(mgmtToken, bridgeToken)
+	if !mgmtEnabled || token == "" {
+		fmt.Println("Configuring local management UI...")
+		configuredPort, configuredToken, err := config.EnsureManagement(core.GenerateToken(24))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error enabling web admin: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("enable web admin: %w", err)
 		}
-		port = result.ManagementPort
-		token = result.ManagementToken
-		fmt.Printf("Web admin configured on port %d.\n", port)
-		fmt.Println("Restart cc-connect for the changes to take effect.")
+		port = configuredPort
+		token = configuredToken
 	}
 
 	baseURL := fmt.Sprintf("http://localhost:%d", port)
+	if !managementReady(baseURL, token) {
+		execPath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("locate cc-connect executable: %w", err)
+		}
+		logDir := filepath.Join(filepath.Dir(configPath), "logs")
+		if err := os.MkdirAll(logDir, 0o755); err != nil {
+			return fmt.Errorf("create log directory: %w", err)
+		}
+		logPath := filepath.Join(logDir, "desktop.log")
+		if err := startDesktopProcess(execPath, []string{"--config", configPath}, logPath); err != nil {
+			return fmt.Errorf("start cc-connect: %w", err)
+		}
+		if err := waitForManagement(baseURL, token, 20*time.Second); err != nil {
+			return fmt.Errorf("cc-connect did not become ready: %w (log: %s)", err, logPath)
+		}
+	}
 
 	noBrowser := false
 	for _, a := range args {
@@ -63,7 +86,7 @@ func runWeb(args []string) {
 	if noBrowser {
 		fmt.Printf("URL:   %s\n", baseURL)
 		fmt.Printf("Token: %s\n", token)
-		return
+		return nil
 	}
 
 	loginURL := fmt.Sprintf("%s/login?token=%s",
@@ -76,6 +99,34 @@ func runWeb(args []string) {
 		fmt.Printf("  %s/login?token=%s\n", baseURL, token)
 		fmt.Printf("\nNote: make sure cc-connect is running (it hosts the web admin on port %d).\n", port)
 	}
+	return nil
+}
+
+func managementReady(baseURL, token string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/v1/ready", nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
+
+func waitForManagement(baseURL, token string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if managementReady(baseURL, token) {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return fmt.Errorf("timeout waiting for %s", baseURL)
 }
 
 func openBrowser(rawURL string) error {

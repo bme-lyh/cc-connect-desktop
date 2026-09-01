@@ -1,5 +1,6 @@
 {
   "nav": {
+    "bots": "機器人",
     "dashboard": "總覽",
     "projects": "專案",
     "providers": "服務商",
@@ -280,7 +281,11 @@
     "cloudWebWsHint": "若已填寫 base URL 可留空，預設 /cloud-web/ws",
     "cloudWebBaseUrlHint": "long poll 必填；WebSocket 可填此項或下方 WebSocket 位址",
     "eventsPath": "事件拉取路徑（長輪詢）",
-    "sendPath": "訊息發送路徑（出站 API）"
+    "sendPath": "訊息發送路徑（出站 API）",
+    "userId": "使用者 ID",
+    "subscription": "訂閱",
+    "credentialsFile": "憑證檔案",
+    "wpsSid": "WPS SID"
   },
   "chat": {
     "noChats": "尚無專案",
@@ -424,6 +429,26 @@
     "free": "免費",
     "freemium": "免費增值",
     "paid": "付費"
+  },
+  "simple": {
+    "myBots": "我的機器人",
+    "botSubtitle": "一個機器人對應一個 Agent、工作區與平台帳號。",
+    "addBot": "新增機器人",
+    "noBots": "尚無機器人，請建立第一個機器人。",
+    "start": "啟動",
+    "stop": "停止",
+    "reconnect": "重新連線",
+    "advanced": "進階設定",
+    "advancedProjectsHint": "進階執行專案，包括舊版多平台設定。",
+    "confirmRemove": "從設定移除 {{name}}？工作階段與憑證會保留。",
+    "state": { "running": "執行中", "stopped": "已停止", "error": "需要處理", "applying": "正在套用" },
+    "wizard": {
+      "detectTitle": "選擇程式設計 Agent", "detectDescription": "設定前會在本機檢測 Codex 與 Pi。", "advancedAgent": "可於進階模式使用", "showAdvanced": "顯示其他 Agent", "hideAdvanced": "收合其他 Agent",
+      "nameTitle": "為機器人命名", "nameDescription": "使用容易辨識平台帳號的簡短名稱。", "botName": "機器人名稱", "botNamePlaceholder": "開發助手",
+      "agentTitle": "Agent 與工作區", "agentDescription": "選擇本機目錄與安全的執行預設值。", "permissionMode": "權限模式", "reasoningEffort": "推理強度", "modelOptional": "模型（選填）", "safeModeHint": "簡潔精靈不會啟用無限制或 yolo 權限。",
+      "platformTitle": "連接 IM 平台", "platformDescription": "所有已編譯平台都在此；不同帳號請建立不同機器人。", "qrSetup": "掃碼連接", "formSetup": "填寫憑證", "scanQR": "請使用手機 App 掃碼並確認授權。", "authorized": "已收到授權",
+      "finishTitle": "確認並啟動", "finishDescription": "憑證將儲存在系統憑證庫。", "platform": "平台", "restartNotice": "儲存後會自動套用設定並重新啟動本機服務。", "saveStart": "儲存並啟動"
+    }
   },
   "theme": {
     "light": "淺色",

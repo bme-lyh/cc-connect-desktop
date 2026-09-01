@@ -4,6 +4,7 @@ Complete guide to using cc-connect features.
 
 ## Table of Contents
 
+- [Simple Desktop Setup](#simple-desktop-setup)
 - [Session Management](#session-management)
 - [Permission Modes](#permission-modes)
 - [API Provider Management](#api-provider-management)
@@ -24,6 +25,16 @@ Complete guide to using cc-connect features.
 - [Web Admin Dashboard (Beta)](#web-admin-dashboard-beta)
 - [Bridge — External Adapter Access (Beta)](#bridge--external-adapter-access-beta)
 - [Configuration Reference](#configuration-reference)
+
+---
+
+## Simple Desktop Setup
+
+Run `cc-connect web` or use the Windows shortcut. The launcher starts the loopback-only management service when necessary, waits for readiness, and opens the authenticated local URL. A configuration with zero projects remains running and is routed to the five-step wizard.
+
+The simple home page treats one bot as one agent, one workspace, and one platform account. Codex and Pi are recommended in the wizard; every registered platform is available, while providers, skills, cron, and multi-platform projects remain under Advanced Settings. Bot secrets are stored in the operating-system credential store and management responses expose only whether a value is configured.
+
+Saving a bot validates the workspace, agent and platform fields, writes the configuration atomically, and performs a controlled restart. If the managed configuration cannot be loaded, cc-connect restores `config.toml.previous`. Stopping or removing a bot leaves its session data and stored credentials intact.
 
 ---
 

@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  LayoutDashboard,
+  Bot,
   FolderKanban,
   MessageSquare,
   Clock,
@@ -15,11 +15,14 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 const navItems = [
-  { key: 'dashboard', path: '/', icon: LayoutDashboard },
+  { key: 'bots', path: '/', icon: Bot },
+  { key: 'chat', path: '/chat', icon: MessageSquare },
+];
+
+const advancedNavItems = [
   { key: 'projects', path: '/projects', icon: FolderKanban },
   { key: 'providers', path: '/providers', icon: Plug },
   { key: 'skills', path: '/skills', icon: Puzzle },
-  { key: 'chat', path: '/chat', icon: MessageSquare },
   { key: 'cron', path: '/cron', icon: Clock },
   { key: 'system', path: '/system', icon: Settings },
 ];
@@ -27,6 +30,7 @@ const navItems = [
 export default function Sidebar() {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
     <aside
@@ -74,6 +78,15 @@ export default function Sidebar() {
           >
             <Icon size={18} className="shrink-0" />
             {!collapsed && <span>{t(`nav.${key}`)}</span>}
+          </NavLink>
+        ))}
+        <button type="button" onClick={() => setAdvancedOpen(!advancedOpen)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100/80 dark:hover:bg-white/[0.06]">
+          <Settings size={18} className="shrink-0" />
+          {!collapsed && <><span className="flex-1 text-left">{t('simple.advanced')}</span>{advancedOpen ? <ChevronLeft size={14} className="-rotate-90" /> : <ChevronRight size={14} className="rotate-90" />}</>}
+        </button>
+        {advancedOpen && advancedNavItems.map(({ key, path, icon: Icon }) => (
+          <NavLink key={key} to={path} className={({ isActive }) => cn('flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all', !collapsed && 'ml-2', isActive ? 'bg-accent/12 text-accent' : 'text-gray-500 hover:bg-gray-100/80 dark:hover:bg-white/[0.06]')}>
+            <Icon size={16} className="shrink-0" />{!collapsed && <span>{t(`nav.${key}`)}</span>}
           </NavLink>
         ))}
       </nav>
