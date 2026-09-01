@@ -79,12 +79,13 @@ func TestSimpleSetup_UpdatePreservesDisabledStateAndMigratesPlaintext(t *testing
 	config.ConfigPath = path
 	t.Cleanup(func() { config.ConfigPath = previousPath })
 
-	disabled, simple := false, true
+	disabled, simple, hidden := false, true, false
 	botID := "11111111-1111-1111-1111-111111111111"
 	if err := config.UpsertSimpleBot(config.ProjectConfig{
 		ID: botID, Name: "bot-111111111111", DisplayName: "Legacy", Enabled: &disabled, SimpleMode: &simple,
 		Agent:     config.AgentConfig{Type: "codex", Options: map[string]any{"work_dir": dir, "mode": "default"}},
 		Platforms: []config.PlatformConfig{{Type: "telegram", Options: map[string]any{"token": "legacy-plaintext"}}},
+		Display:   &config.DisplayConfig{ThinkingMessages: &hidden, ToolMessages: &hidden},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -102,6 +103,9 @@ func TestSimpleSetup_UpdatePreservesDisabledStateAndMigratesPlaintext(t *testing
 	}
 	if !updated.ReplyFooter {
 		t.Fatal("editing a legacy bot must preserve the upstream reply footer default")
+	}
+	if updated.ThinkingMessages || updated.ToolMessages {
+		t.Fatal("editing a bot must preserve its progress visibility settings")
 	}
 	key := botID + "/telegram/token"
 	if value, err := store.Get(key); err != nil || value != "legacy-plaintext" {
@@ -134,10 +138,13 @@ func TestSimpleSetup_NewBotDefaultsToCleanReplies(t *testing.T) {
 	config.ConfigPath = path
 	t.Cleanup(func() { config.ConfigPath = previousPath })
 
+	hidden := false
 	created, err := saveSimpleBot(core.BotUpsertRequest{
 		DisplayName: "Clean", AgentType: "codex", WorkDir: dir,
 		PermissionMode: "suggest", PlatformType: "telegram",
-		Options: map[string]any{"token": "secret://cc-connect/test/telegram/token"},
+		Options:          map[string]any{"token": "secret://cc-connect/test/telegram/token"},
+		ThinkingMessages: &hidden,
+		ToolMessages:     &hidden,
 	}, buildSetupCatalog(), secretstore.NewMemory())
 	if err != nil {
 		t.Fatalf("saveSimpleBot() error = %v", err)
@@ -145,11 +152,20 @@ func TestSimpleSetup_NewBotDefaultsToCleanReplies(t *testing.T) {
 	if created.ReplyFooter {
 		t.Fatal("new simple bot should hide answer diagnostics by default")
 	}
+	if created.ThinkingMessages || created.ToolMessages {
+		t.Fatal("explicitly hidden thinking and tool messages must remain hidden")
+	}
 	projects, err := config.ListProjectConfigs()
 	if err != nil || len(projects) != 1 {
 		t.Fatalf("projects = %d, err = %v", len(projects), err)
 	}
 	if projects[0].ReplyFooter == nil || *projects[0].ReplyFooter {
 		t.Fatalf("persisted reply_footer = %v, want false", projects[0].ReplyFooter)
+	}
+	if projects[0].Display == nil || projects[0].Display.ThinkingMessages == nil || *projects[0].Display.ThinkingMessages {
+		t.Fatalf("persisted thinking_messages = %#v, want false", projects[0].Display)
+	}
+	if projects[0].Display.ToolMessages == nil || *projects[0].Display.ToolMessages {
+		t.Fatalf("persisted tool_messages = %#v, want false", projects[0].Display)
 	}
 }

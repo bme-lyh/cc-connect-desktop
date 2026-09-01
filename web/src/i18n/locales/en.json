@@ -352,7 +352,7 @@
     "thinkingMaxLen": "Thinking max length",
     "thinkingMaxLenHint": "Max characters for thinking messages; 0 = no truncation",
     "toolMessages": "Tool progress",
-    "toolMessagesHint": "Show or hide tool progress messages",
+    "toolMessagesHint": "Show or hide tool calls and tool results",
     "toolMaxLen": "Tool max length",
     "toolMaxLenHint": "Max characters for tool use messages; 0 = no truncation",
     "streamPreview": "Stream preview",

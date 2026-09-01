@@ -69,35 +69,39 @@ type SetupStatus struct {
 }
 
 type BotSummary struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	DisplayName     string `json:"display_name"`
-	Enabled         bool   `json:"enabled"`
-	AgentType       string `json:"agent_type"`
-	WorkDir         string `json:"work_dir"`
-	PermissionMode  string `json:"permission_mode,omitempty"`
-	Model           string `json:"model,omitempty"`
-	ReasoningEffort string `json:"reasoning_effort,omitempty"`
-	ReplyFooter     bool   `json:"reply_footer"`
-	PlatformType    string `json:"platform_type"`
-	Configured      bool   `json:"configured"`
-	RuntimeState    string `json:"runtime_state"`
-	RuntimeError    string `json:"runtime_error,omitempty"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	DisplayName      string `json:"display_name"`
+	Enabled          bool   `json:"enabled"`
+	AgentType        string `json:"agent_type"`
+	WorkDir          string `json:"work_dir"`
+	PermissionMode   string `json:"permission_mode,omitempty"`
+	Model            string `json:"model,omitempty"`
+	ReasoningEffort  string `json:"reasoning_effort,omitempty"`
+	ReplyFooter      bool   `json:"reply_footer"`
+	ThinkingMessages bool   `json:"thinking_messages"`
+	ToolMessages     bool   `json:"tool_messages"`
+	PlatformType     string `json:"platform_type"`
+	Configured       bool   `json:"configured"`
+	RuntimeState     string `json:"runtime_state"`
+	RuntimeError     string `json:"runtime_error,omitempty"`
 }
 
 type BotUpsertRequest struct {
-	ID              string         `json:"id,omitempty"`
-	Name            string         `json:"name"`
-	DisplayName     string         `json:"display_name"`
-	Enabled         *bool          `json:"enabled,omitempty"`
-	AgentType       string         `json:"agent_type"`
-	WorkDir         string         `json:"work_dir"`
-	PermissionMode  string         `json:"permission_mode,omitempty"`
-	Model           string         `json:"model,omitempty"`
-	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
-	ReplyFooter     *bool          `json:"reply_footer,omitempty"`
-	PlatformType    string         `json:"platform_type"`
-	Options         map[string]any `json:"options"`
+	ID               string         `json:"id,omitempty"`
+	Name             string         `json:"name"`
+	DisplayName      string         `json:"display_name"`
+	Enabled          *bool          `json:"enabled,omitempty"`
+	AgentType        string         `json:"agent_type"`
+	WorkDir          string         `json:"work_dir"`
+	PermissionMode   string         `json:"permission_mode,omitempty"`
+	Model            string         `json:"model,omitempty"`
+	ReasoningEffort  string         `json:"reasoning_effort,omitempty"`
+	ReplyFooter      *bool          `json:"reply_footer,omitempty"`
+	ThinkingMessages *bool          `json:"thinking_messages,omitempty"`
+	ToolMessages     *bool          `json:"tool_messages,omitempty"`
+	PlatformType     string         `json:"platform_type"`
+	Options          map[string]any `json:"options"`
 }
 
 func (m *ManagementServer) handleReady(w http.ResponseWriter, r *http.Request) {

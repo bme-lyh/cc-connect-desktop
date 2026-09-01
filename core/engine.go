@@ -2870,7 +2870,7 @@ func (e *Engine) handleMessage(p Platform, msg *Message) {
 					r[0] = []rune(strings.ToUpper(string(r[0])))[0]
 				}
 				platformName = string(r)
-				e.send(p, msg.ReplyCtx, e.i18n.Tf(MsgVoiceUsingPlatformRecognition, platformName))
+				e.reply(p, msg.ReplyCtx, e.i18n.Tf(MsgVoiceUsingPlatformRecognition, platformName))
 			}
 		}
 		// Continue processing with the platform-provided text content
@@ -3330,7 +3330,7 @@ func (e *Engine) handleVoiceMessage(p Platform, msg *Message) {
 		"platform", msg.Platform, "user", msg.UserName,
 		"format", audio.Format, "size", len(audio.Data),
 	)
-	e.send(p, msg.ReplyCtx, e.i18n.T(MsgVoiceTranscribing))
+	e.reply(p, msg.ReplyCtx, e.i18n.T(MsgVoiceTranscribing))
 
 	text, err := TranscribeAudio(e.ctx, e.speech.STT, audio, e.speech.Language)
 	if err != nil {
@@ -3346,7 +3346,7 @@ func (e *Engine) handleVoiceMessage(p Platform, msg *Message) {
 	}
 
 	slog.Info("voice transcribed", "text_len", len(text))
-	e.send(p, msg.ReplyCtx, fmt.Sprintf(e.i18n.T(MsgVoiceTranscribed), text))
+	e.reply(p, msg.ReplyCtx, fmt.Sprintf(e.i18n.T(MsgVoiceTranscribed), text))
 
 	// Replace audio with transcribed text and re-dispatch
 	msg.Audio = nil
@@ -4167,7 +4167,7 @@ func (e *Engine) getOrCreateInteractiveStateWith(sessionKey string, p Platform, 
 		session.SetAgentSessionID("", agent.Name())
 		sessions.Save()
 		startSessionID = ""
-		e.send(p, replyCtx, e.i18n.T(MsgSessionResumeUnsafe))
+		e.reply(p, replyCtx, e.i18n.T(MsgSessionResumeUnsafe))
 	}
 
 	isResume := startSessionID != ""
@@ -4214,7 +4214,7 @@ func (e *Engine) getOrCreateInteractiveStateWith(sessionKey string, p Platform, 
 	// Surface any startup warning (e.g. permission mode downgrade under root) to the IM user.
 	if warner, ok := agentSession.(StartupWarner); ok {
 		if msg := warner.StartupWarning(); msg != "" {
-			e.send(p, replyCtx, msg)
+			e.reply(p, replyCtx, msg)
 		}
 	}
 
@@ -5009,11 +5009,11 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 	workspaceRenderer := func(content string) string {
 		return e.renderOutgoingContentForWorkspace(state.platform, content, workspaceDir)
 	}
-	sendWorkspace := func(p Platform, replyCtx any, content string) {
-		e.sendForWorkspace(p, replyCtx, content, workspaceDir)
+	replyWorkspace := func(p Platform, replyCtx any, content string) {
+		e.replyForWorkspace(p, replyCtx, content, workspaceDir)
 	}
-	sendWorkspaceWithError := func(p Platform, replyCtx any, content string) error {
-		return e.sendWithErrorForWorkspace(p, replyCtx, content, workspaceDir)
+	replyWorkspaceWithError := func(p Platform, replyCtx any, content string) error {
+		return e.replyWithErrorForWorkspace(p, replyCtx, content, workspaceDir)
 	}
 
 	// Streaming card: aggregate entire turn into a single updatable card.
@@ -5042,7 +5042,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 		if replyContent == "" {
 			replyContent = e.i18n.T(MsgStarting)
 		}
-		e.send(state.platform, state.replyCtx, replyContent)
+		e.reply(state.platform, state.replyCtx, replyContent)
 	}
 
 	// Idle timeout: resets on every received event (0 = disabled)
@@ -5093,7 +5093,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 				state.mu.Lock()
 				p := state.platform
 				state.mu.Unlock()
-				e.send(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError), err))
+				e.reply(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError), err))
 				return
 			}
 			continue
@@ -5106,7 +5106,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 			state.eventsNeedResync = true
 			p := state.platform
 			state.mu.Unlock()
-			e.send(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError), "agent session timed out (no response)"))
+			e.reply(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError), "agent session timed out (no response)"))
 			e.cleanupInteractiveState(sessionKey, state)
 			return
 		case <-turnDeadlineCh:
@@ -5118,7 +5118,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 			state.mu.Lock()
 			p := state.platform
 			state.mu.Unlock()
-			e.send(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError),
+			e.reply(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError),
 				fmt.Sprintf("agent turn exceeded maximum time (%v), stopping", e.maxTurnTime)))
 
 			// Two-phase shutdown: first try a graceful stop so the agent can
@@ -5266,7 +5266,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 						segment := strings.Join(textParts[segmentStart:], "")
 						if segment != "" {
 							for _, chunk := range SplitMessageCodeFenceAware(segment, maxPlatformMessageLen) {
-								sendWorkspace(p, replyCtx, chunk)
+								replyWorkspace(p, replyCtx, chunk)
 							}
 						}
 					}
@@ -5289,7 +5289,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 						segment := strings.Join(textParts[segmentStart:], "")
 						if segment != "" {
 							for _, chunk := range SplitMessageCodeFenceAware(segment, maxPlatformMessageLen) {
-								sendWorkspace(p, replyCtx, chunk)
+								replyWorkspace(p, replyCtx, chunk)
 							}
 						}
 					}
@@ -5303,7 +5303,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 				preview := truncateIf(event.Content, e.display.ThinkingMaxLen)
 				thinkingMsg := fmt.Sprintf(e.i18n.T(MsgThinking), preview)
 				if !cp.AppendEvent(ProgressEntryThinking, preview, "", thinkingMsg) {
-					sendWorkspace(p, replyCtx, thinkingMsg)
+					replyWorkspace(p, replyCtx, thinkingMsg)
 				}
 			}
 
@@ -5353,7 +5353,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 						segment := strings.Join(textParts[segmentStart:], "")
 						if segment != "" {
 							for _, chunk := range SplitMessageCodeFenceAware(segment, maxPlatformMessageLen) {
-								sendWorkspace(p, replyCtx, chunk)
+								replyWorkspace(p, replyCtx, chunk)
 							}
 						}
 					}
@@ -5397,7 +5397,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 						segment := strings.Join(textParts[segmentStart:], "")
 						if segment != "" {
 							for _, chunk := range SplitMessageCodeFenceAware(segment, maxPlatformMessageLen) {
-								sendWorkspace(p, replyCtx, chunk)
+								replyWorkspace(p, replyCtx, chunk)
 							}
 						}
 					}
@@ -5432,7 +5432,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 				cardToolInput := truncateIf(toolInput, e.display.ToolMaxLen)
 				if !cp.AppendEvent(ProgressEntryToolUse, cardToolInput, event.ToolName, toolMsg) {
 					for _, chunk := range SplitMessageCodeFenceAware(toolMsg, maxPlatformMessageLen) {
-						sendWorkspace(p, replyCtx, chunk)
+						replyWorkspace(p, replyCtx, chunk)
 					}
 				}
 			}
@@ -5478,7 +5478,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 					}
 					if !cp.AppendStructured(entry, resultMsg) {
 						if !SuppressStandaloneToolResultEvent(p) {
-							e.sendRaw(p, replyCtx, resultMsg)
+							e.replyRaw(p, replyCtx, resultMsg)
 						}
 					}
 				}
@@ -5649,7 +5649,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 					segment := strings.Join(textParts[segmentStart:], "")
 					if segment != "" {
 						for _, chunk := range SplitMessageCodeFenceAware(segment, maxPlatformMessageLen) {
-							sendWorkspace(p, replyCtx, chunk)
+							replyWorkspace(p, replyCtx, chunk)
 						}
 					}
 				}
@@ -5925,7 +5925,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 					// for a silent reply, which has no deliverable content.
 					if !isSilent {
 						for _, chunk := range SplitMessageCodeFenceAware(fullResponse, maxPlatformMessageLen) {
-							if err := sendWorkspaceWithError(p, replyCtx, chunk); err != nil {
+							if err := replyWorkspaceWithError(p, replyCtx, chunk); err != nil {
 								return
 							}
 						}
@@ -6000,14 +6000,14 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 					if updater, ok := p.(MessageUpdater); ok {
 						if err := updater.UpdateMessage(e.ctx, cardMessageID, finalCard); err != nil {
 							slog.Debug("rich card: final update failed, falling back to send", "platform", p.Name(), "error", err)
-							if err := p.Send(e.ctx, replyCtx, finalCard); err != nil {
+							if err := e.replyWithError(p, replyCtx, finalCard); err != nil {
 								slog.Error("failed to send rich card reply", "error", err)
 								return
 							}
 						}
 					}
 				} else {
-					if err := p.Send(e.ctx, replyCtx, finalCard); err != nil {
+					if err := e.replyWithError(p, replyCtx, finalCard); err != nil {
 						slog.Error("failed to send rich card reply", "error", err)
 						return
 					}
@@ -6015,7 +6015,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 				for _, overflow := range parts[1:] {
 					overflowBody := resolveRichCardMarkdown(overflow, true)
 					overflowCard := richCardSupporter.BuildRichCard(CardStatusDone, "", nil, overflowBody, false, richStatusFooter)
-					if err := p.Send(e.ctx, replyCtx, overflowCard); err != nil {
+					if err := e.replyWithError(p, replyCtx, overflowCard); err != nil {
 						slog.Error("failed to send overflow rich card", "error", err)
 						return
 					}
@@ -6028,7 +6028,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 				if segmentStart < len(textParts) {
 					unsent := strings.Join(textParts[segmentStart:], "")
 					if unsent != "" {
-						if !sendChunksWithStatusFooter(e.ctx, p, replyCtx, unsent, statusFooter, sendWorkspaceWithError) {
+						if !sendChunksWithStatusFooter(e.ctx, p, replyCtx, unsent, statusFooter, replyWorkspaceWithError) {
 							return
 						}
 					}
@@ -6037,7 +6037,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 				sp.discard()
 				metaOnly := strings.TrimSpace(strings.TrimPrefix(fullResponse, baseResponse))
 				if metaOnly != "" || statusFooter != "" {
-					if !sendChunksWithStatusFooter(e.ctx, p, replyCtx, metaOnly, statusFooter, sendWorkspaceWithError) {
+					if !sendChunksWithStatusFooter(e.ctx, p, replyCtx, metaOnly, statusFooter, replyWorkspaceWithError) {
 						return
 					}
 				}
@@ -6045,8 +6045,8 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 			} else if sp.finish(fullResponse, statusFooter) {
 				slog.Debug("EventResult: finalized via stream preview", "response_len", len(fullResponse), "footer_len", len(statusFooter))
 			} else {
-				slog.Debug("EventResult: sending via p.Send (preview inactive or failed)", "response_len", len(fullResponse), "footer_len", len(statusFooter))
-				if !sendChunksWithStatusFooter(e.ctx, p, replyCtx, fullResponse, statusFooter, sendWorkspaceWithError) {
+				slog.Debug("EventResult: sending via p.Reply (preview inactive or failed)", "response_len", len(fullResponse), "footer_len", len(statusFooter))
+				if !sendChunksWithStatusFooter(e.ctx, p, replyCtx, fullResponse, statusFooter, replyWorkspaceWithError) {
 					return
 				}
 			}
@@ -6089,7 +6089,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 					if tokenEst > 0 {
 						compressNotice = fmt.Sprintf("%s (~%dk tokens)", compressNotice, tokenEst/1000)
 					}
-					e.send(state.platform, state.replyCtx, compressNotice)
+					e.reply(state.platform, state.replyCtx, compressNotice)
 
 					// Run compress inline while the session is still locked.
 					e.runCompress(state, session, sessions, sessionKey, state.platform, state.replyCtx, true)
@@ -6216,7 +6216,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 					if replyContent == "" {
 						replyContent = e.i18n.T(MsgStarting)
 					}
-					e.send(queued.platform, queued.replyCtx, replyContent)
+					e.reply(queued.platform, queued.replyCtx, replyContent)
 				}
 
 				session.AddHistory("user", queued.content)
@@ -6288,7 +6288,7 @@ func (e *Engine) processInteractiveEvents(state *interactiveState, session *Sess
 						break
 					}
 				}
-				e.send(p, replyCtx, userMsg)
+				e.reply(p, replyCtx, userMsg)
 			}
 			// Only drop queued messages if the agent session is dead.
 			// Some agents (e.g. Codex) emit EventError for per-turn failures
@@ -6348,7 +6348,7 @@ channelClosed:
 				unsent := strings.Join(textParts[segmentStart:], "")
 				if unsent != "" {
 					for _, chunk := range SplitMessageCodeFenceAware(unsent, maxPlatformMessageLen) {
-						if err := sendWorkspaceWithError(p, replyCtx, chunk); err != nil {
+						if err := replyWorkspaceWithError(p, replyCtx, chunk); err != nil {
 							return
 						}
 					}
@@ -6358,7 +6358,7 @@ channelClosed:
 			slog.Debug("stream preview: finalized in-place (process exited)")
 		} else {
 			for _, chunk := range SplitMessageCodeFenceAware(fullResponse, maxPlatformMessageLen) {
-				if err := sendWorkspaceWithError(p, replyCtx, chunk); err != nil {
+				if err := replyWorkspaceWithError(p, replyCtx, chunk); err != nil {
 					return
 				}
 			}
@@ -6470,7 +6470,7 @@ func (e *Engine) drainPendingMessages(state *interactiveState, session *Session,
 		as := state.agentSession // capture under lock to avoid race with cleanup (mirrors #1436)
 		state.mu.Unlock()
 		if as == nil || !as.Alive() {
-			e.send(queued.platform, queued.replyCtx, fmt.Sprintf(e.i18n.T(MsgError), "agent session ended"))
+			e.reply(queued.platform, queued.replyCtx, fmt.Sprintf(e.i18n.T(MsgError), "agent session ended"))
 			e.notifyDroppedQueuedMessages(state, fmt.Errorf("agent session ended"))
 			return false
 		}
@@ -6830,7 +6830,7 @@ func (e *Engine) handleCommand(p Platform, msg *Message, raw string) bool {
 			return true
 		}
 		// Not a cc-connect command — notify user, then fall through to agent
-		e.send(p, msg.ReplyCtx, fmt.Sprintf(e.i18n.T(MsgUnknownCommand), "/"+cmd))
+		e.reply(p, msg.ReplyCtx, fmt.Sprintf(e.i18n.T(MsgUnknownCommand), "/"+cmd))
 		return false
 	}
 	return true
@@ -8068,7 +8068,7 @@ func (e *Engine) runShellWithProgress(p Platform, replyCtx any, command string, 
 		mu.Lock()
 		output := buf.String()
 		mu.Unlock()
-		e.send(p, replyCtx, e.formatShellTimeout(cmdLabel, output, maxOutput))
+		e.reply(p, replyCtx, e.formatShellTimeout(cmdLabel, output, maxOutput))
 		return fmt.Errorf("command timed out after %s", timeout)
 	case <-time.After(quickFinishTimeout):
 		// Still running — fall through to progress mode
@@ -8093,7 +8093,7 @@ func (e *Engine) runShellWithProgress(p Platform, replyCtx any, command string, 
 
 	if !useUpdate {
 		// Platform doesn't support in-place updates — send a status message
-		e.send(p, replyCtx, fmt.Sprintf("⏳ `%s`", cmdLabel))
+		e.reply(p, replyCtx, fmt.Sprintf("⏳ `%s`", cmdLabel))
 	}
 
 	// Periodic updates (only for platforms that support UpdateMessage)
@@ -8134,7 +8134,7 @@ func (e *Engine) runShellWithProgress(p Platform, replyCtx any, command string, 
 		if useUpdate {
 			_ = updaterFor(p).UpdateMessage(e.ctx, previewHandle, timeoutMsg)
 		} else {
-			e.send(p, replyCtx, timeoutMsg)
+			e.reply(p, replyCtx, timeoutMsg)
 		}
 		return fmt.Errorf("command timed out after %s", timeout)
 	}
@@ -10463,7 +10463,7 @@ func (e *Engine) cmdCompress(p Platform, msg *Message) {
 		return
 	}
 
-	e.send(p, msg.ReplyCtx, e.i18n.T(MsgCompressing))
+	e.reply(p, msg.ReplyCtx, e.i18n.T(MsgCompressing))
 
 	go e.runCompress(state, session, sessions, iKey, p, msg.ReplyCtx, false)
 }
@@ -10542,7 +10542,7 @@ func (e *Engine) processCompressEvents(state *interactiveState, session *Session
 				e.cleanupInteractiveState(sessionKey, state)
 				if !auto {
 					if len(textParts) > 0 {
-						e.send(p, replyCtx, strings.Join(textParts, ""))
+						e.reply(p, replyCtx, strings.Join(textParts, ""))
 					} else {
 						e.reply(p, replyCtx, e.i18n.T(MsgCompressDone))
 					}
@@ -10552,7 +10552,7 @@ func (e *Engine) processCompressEvents(state *interactiveState, session *Session
 			}
 		case <-idleCh:
 			if !auto {
-				e.send(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError), "compress timed out"))
+				e.reply(p, replyCtx, fmt.Sprintf(e.i18n.T(MsgError), "compress timed out"))
 			}
 			e.cleanupInteractiveState(sessionKey, state)
 			e.notifyDroppedQueuedMessages(state, fmt.Errorf("compress timed out"))
@@ -10602,7 +10602,7 @@ func (e *Engine) processCompressEvents(state *interactiveState, session *Session
 			}
 			if !auto {
 				if result != "" {
-					e.send(p, replyCtx, result)
+					e.reply(p, replyCtx, result)
 				} else {
 					e.reply(p, replyCtx, e.i18n.T(MsgCompressDone))
 				}
@@ -11782,11 +11782,11 @@ func (e *Engine) sendPermissionPrompt(p Platform, replyCtx any, prompt, toolName
 			Buttons(allowAllBtn).
 			Note(e.i18n.T(MsgPermCardNote)).
 			Build()
-		e.sendWithCard(p, replyCtx, card)
+		e.replyWithCard(p, replyCtx, card)
 		return
 	}
 
-	e.send(p, replyCtx, prompt)
+	e.reply(p, replyCtx, prompt)
 }
 
 // sendAskQuestionPrompt renders one question (by index) from the AskUserQuestion list.
@@ -11836,7 +11836,7 @@ func (e *Engine) sendAskQuestionPrompt(p Platform, replyCtx any, questions []Use
 			}
 			cb.Note(e.i18n.T(MsgAskQuestionNote))
 		}
-		e.sendWithCard(p, replyCtx, cb.Build())
+		e.replyWithCard(p, replyCtx, cb.Build())
 		return
 	}
 
@@ -11900,7 +11900,7 @@ func (e *Engine) sendAskQuestionPrompt(p Platform, replyCtx any, questions []Use
 		sb.WriteString("\n")
 	}
 	sb.WriteString(fmt.Sprintf("\n%s", e.i18n.T(MsgAskQuestionNote)))
-	e.send(p, replyCtx, sb.String())
+	e.reply(p, replyCtx, sb.String())
 }
 
 // waitOutgoing blocks on the per-platform outgoing rate limiter when enabled.
@@ -11929,6 +11929,15 @@ func (e *Engine) sendWithErrorForWorkspace(p Platform, replyCtx any, content, wo
 
 func (e *Engine) sendForWorkspace(p Platform, replyCtx any, content, workspaceDir string) {
 	_ = e.sendWithErrorForWorkspace(p, replyCtx, content, workspaceDir)
+}
+
+func (e *Engine) replyWithErrorForWorkspace(p Platform, replyCtx any, content, workspaceDir string) error {
+	content = e.renderOutgoingContentForWorkspace(p, content, workspaceDir)
+	return e.replyWithError(p, replyCtx, content)
+}
+
+func (e *Engine) replyForWorkspace(p Platform, replyCtx any, content, workspaceDir string) {
+	_ = e.replyWithErrorForWorkspace(p, replyCtx, content, workspaceDir)
 }
 
 func (e *Engine) renderCardForPlatform(p Platform, card *Card) *Card {
@@ -12023,6 +12032,12 @@ func (e *Engine) sendRaw(p Platform, replyCtx any, content string) {
 		return
 	}
 	_ = e.sendAlreadyRenderedWithError(p, replyCtx, content)
+}
+
+// replyRaw replies without local-reference rendering. This is used for raw
+// tool outputs emitted as part of an inbound user turn.
+func (e *Engine) replyRaw(p Platform, replyCtx any, content string) {
+	_ = e.replyWithError(p, replyCtx, content)
 }
 
 // drainEvents discards any buffered events from the channel.

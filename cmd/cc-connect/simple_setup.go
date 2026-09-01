@@ -81,20 +81,32 @@ func projectBotSummary(project config.ProjectConfig, state string) core.BotSumma
 	model, _ := project.Agent.Options["model"].(string)
 	reasoning, _ := project.Agent.Options["reasoning_effort"].(string)
 	replyFooter := project.ReplyFooter == nil || *project.ReplyFooter
+	thinkingMessages := true
+	toolMessages := true
+	if project.Display != nil {
+		if project.Display.ThinkingMessages != nil {
+			thinkingMessages = *project.Display.ThinkingMessages
+		}
+		if project.Display.ToolMessages != nil {
+			toolMessages = *project.Display.ToolMessages
+		}
+	}
 	return core.BotSummary{
-		ID:              project.ID,
-		Name:            project.Name,
-		DisplayName:     project.DisplayName,
-		Enabled:         config.ProjectEnabled(project),
-		AgentType:       project.Agent.Type,
-		WorkDir:         workDir,
-		PermissionMode:  mode,
-		Model:           model,
-		ReasoningEffort: reasoning,
-		ReplyFooter:     replyFooter,
-		PlatformType:    project.Platforms[0].Type,
-		Configured:      true,
-		RuntimeState:    state,
+		ID:               project.ID,
+		Name:             project.Name,
+		DisplayName:      project.DisplayName,
+		Enabled:          config.ProjectEnabled(project),
+		AgentType:        project.Agent.Type,
+		WorkDir:          workDir,
+		PermissionMode:   mode,
+		Model:            model,
+		ReasoningEffort:  reasoning,
+		ReplyFooter:      replyFooter,
+		ThinkingMessages: thinkingMessages,
+		ToolMessages:     toolMessages,
+		PlatformType:     project.Platforms[0].Type,
+		Configured:       true,
+		RuntimeState:     state,
 	}
 }
 
@@ -207,6 +219,24 @@ func saveSimpleBot(req core.BotUpsertRequest, catalog core.SetupCatalog, store s
 		value := *req.ReplyFooter
 		replyFooter = &value
 	}
+	var display *config.DisplayConfig
+	if existing != nil && existing.Display != nil {
+		value := *existing.Display
+		display = &value
+	}
+	if req.ThinkingMessages != nil || req.ToolMessages != nil {
+		if display == nil {
+			display = &config.DisplayConfig{}
+		}
+		if req.ThinkingMessages != nil {
+			value := *req.ThinkingMessages
+			display.ThinkingMessages = &value
+		}
+		if req.ToolMessages != nil {
+			value := *req.ToolMessages
+			display.ToolMessages = &value
+		}
+	}
 	bot := config.ProjectConfig{
 		ID:          req.ID,
 		Name:        name,
@@ -214,6 +244,7 @@ func saveSimpleBot(req core.BotUpsertRequest, catalog core.SetupCatalog, store s
 		Enabled:     &enabled,
 		SimpleMode:  &simple,
 		ReplyFooter: replyFooter,
+		Display:     display,
 		Agent: config.AgentConfig{
 			Type:    req.AgentType,
 			Options: agentOptions,

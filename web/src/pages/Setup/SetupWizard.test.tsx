@@ -66,6 +66,8 @@ describe('SetupWizard', () => {
     expect(screen.getByRole('option', { name: 'gpt-5.6-terra' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText('Model')).toHaveValue('gpt-5.6-sol'));
     expect(screen.getByLabelText('Show answer details')).not.toBeChecked();
+    expect(screen.getByLabelText('Thinking messages')).toBeChecked();
+    expect(screen.getByLabelText('Tool progress')).toBeChecked();
 
     fireEvent.click(screen.getByRole('button', { name: 'Choose folder' }));
     await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('D:\\projects\\selected'));
@@ -77,6 +79,7 @@ describe('SetupWizard', () => {
         id: 'bot-1', name: 'bot-1', display_name: 'Legacy bot', enabled: true,
         agent_type: 'codex', work_dir: 'D:\\projects\\legacy', permission_mode: 'suggest',
         model: 'legacy-model', reasoning_effort: 'medium', reply_footer: true,
+        thinking_messages: false, tool_messages: false,
         platform_type: 'telegram', configured: true, runtime_state: 'stopped',
       }],
     });
@@ -88,5 +91,7 @@ describe('SetupWizard', () => {
 
     expect(await screen.findByRole('option', { name: 'legacy-model' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText('Model')).toHaveValue('legacy-model'));
+    expect(screen.getByLabelText('Thinking messages')).not.toBeChecked();
+    expect(screen.getByLabelText('Tool progress')).not.toBeChecked();
   });
 });

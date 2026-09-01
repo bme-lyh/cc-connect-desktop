@@ -464,10 +464,10 @@ func (w *compactProgressWriter) AppendStructured(item ProgressCardEntry, fallbac
 			return true
 		}
 		callCtx, cancel := w.withAPITimeout()
-		err := w.platform.Send(callCtx, w.replyCtx, w.content)
+		err := w.platform.Reply(callCtx, w.replyCtx, w.content)
 		cancel()
 		if err != nil {
-			slog.Warn("progress writer: initial Send failed", "platform", w.platform.Name(), "style", w.style, "error", err)
+			slog.Warn("progress writer: initial Reply failed", "platform", w.platform.Name(), "style", w.style, "error", err)
 			w.failed = true
 			return false
 		}

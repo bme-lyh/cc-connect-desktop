@@ -48,6 +48,8 @@ export interface BotSummary {
   model?: string;
   reasoning_effort?: string;
   reply_footer: boolean;
+  thinking_messages: boolean;
+  tool_messages: boolean;
   platform_type: string;
   configured: boolean;
   runtime_state: 'running' | 'stopped' | 'error' | 'applying';
@@ -65,6 +67,8 @@ export interface BotRequest {
   model?: string;
   reasoning_effort?: string;
   reply_footer?: boolean;
+  thinking_messages?: boolean;
+  tool_messages?: boolean;
   platform_type: string;
   options: Record<string, unknown>;
 }

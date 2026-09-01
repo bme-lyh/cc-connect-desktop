@@ -23,10 +23,12 @@ Beta since v1.5.0 stable — 16 merged PRs focused on Feishu/Weixin reliability,
 - **Simple desktop setup**: zero-project startup, a five-step Codex/Pi onboarding wizard, bot-card home page, unified registered-platform catalog, controlled restart/recovery, and advanced settings navigation.
 - **Simpler agent setup on Windows**: native workspace folder selection and a refreshable Codex/Pi model catalog replace path-only and free-text model setup.
 - **Desktop shutdown control**: the management header can now gracefully stop all bots and the local cc-connect process after confirmation, separately from browser logout.
+- **Per-bot progress visibility**: the simple desktop settings page now exposes separate toggles for thinking messages and tool progress (tool calls plus results).
 - **Credential safety**: Windows Credential Manager-backed `secret://cc-connect/...` references, legacy plaintext migration on edit, and management API/config redaction.
 - **Windows portable release**: per-user installer, hidden desktop launcher, Task Scheduler integration, ZIP/SHA-256 packaging, and CI workflow. See `changelogs/simple-desktop.md`.
 
 ### Fixed
+- **Weixin interactive replies**: route user-triggered progress, tool output, permission prompts, errors, and final answers through the reactive `Reply` path so normal conversations do not consume the 4-per-24-hour proactive push budget. Cron, timer, relay, and other unsolicited notifications continue to use the protected `Send` path.
 - **Windows simple setup polish**: keep the native folder picker above the browser, restart after applying configuration without a persistent console window, and expose a simple answer-details toggle whose clean-mode default hides model/token/context/workspace metadata.
 - **Windows setup diagnostics**: run Codex/Pi version and sign-in probes without opening transient command windows.
 - **`agent_session_idle_timeout_mins`**: new per-project config option that closes an idle live agent process after a clean turn while preserving the cc-connect session and saved agent session ID. The next message starts a new agent process and resumes the same conversation. Set to `0` or leave unset to disable (#1338).

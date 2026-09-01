@@ -266,8 +266,8 @@ func (sp *streamPreview) flushLocked(text string) {
 			}
 			sp.previewMsgID = handle
 		} else {
-			if err := sp.platform.Send(sp.ctx, sp.replyCtx, text); err != nil {
-				slog.Debug("stream preview: initial send failed", "error", err)
+			if err := sp.platform.Reply(sp.ctx, sp.replyCtx, text); err != nil {
+				slog.Debug("stream preview: initial reply failed", "error", err)
 				sp.degraded = true
 				return
 			}

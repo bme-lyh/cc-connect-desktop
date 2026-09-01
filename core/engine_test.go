@@ -88,6 +88,32 @@ func (p *stubPlatformEngine) clearSent() {
 	p.mu.Unlock()
 }
 
+type replyPathRecordingPlatform struct {
+	stubPlatformEngine
+	replies []string
+	pushes  []string
+}
+
+func (p *replyPathRecordingPlatform) Reply(_ context.Context, _ any, content string) error {
+	p.mu.Lock()
+	p.replies = append(p.replies, content)
+	p.mu.Unlock()
+	return nil
+}
+
+func (p *replyPathRecordingPlatform) Send(_ context.Context, _ any, content string) error {
+	p.mu.Lock()
+	p.pushes = append(p.pushes, content)
+	p.mu.Unlock()
+	return nil
+}
+
+func (p *replyPathRecordingPlatform) getRoutes() (replies, pushes []string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([]string(nil), p.replies...), append([]string(nil), p.pushes...)
+}
+
 type recallCheckingPlatform struct {
 	stubPlatformEngine
 	recalled bool
@@ -1023,6 +1049,47 @@ func TestProcessInteractiveEvents_SuppressesDuplicateSideChannelText(t *testing.
 
 	if got := p.getSent(); len(got) != 1 || got[0] != sideText {
 		t.Fatalf("sent text = %#v, want one side-channel message", got)
+	}
+}
+
+func TestProcessInteractiveEvents_UserTurnUsesReplyPath(t *testing.T) {
+	p := &replyPathRecordingPlatform{stubPlatformEngine: stubPlatformEngine{n: "weixin"}}
+	e := NewEngine("test", &stubAgent{}, []Platform{p}, "", LangEnglish)
+	e.SetDisplayConfig(DisplayCfg{
+		Mode:             "full",
+		ThinkingMessages: true,
+		ThinkingMaxLen:   300,
+		ToolMaxLen:       500,
+		ToolMessages:     true,
+	})
+
+	sessionKey := "weixin:user-reply-path"
+	session := e.sessions.GetOrCreateActive(sessionKey)
+	agentSession := newControllableSession("reply-path-session")
+	state := &interactiveState{
+		agentSession: agentSession,
+		platform:     p,
+		replyCtx:     "ctx-reply-path",
+	}
+	e.interactiveStates[sessionKey] = state
+
+	agentSession.events <- Event{Type: EventThinking, Content: "checking current state"}
+	agentSession.events <- Event{Type: EventToolUse, ToolName: "Bash", ToolInput: "pwd"}
+	agentSession.events <- Event{Type: EventToolResult, ToolName: "Bash", ToolResult: "ok", ToolStatus: "completed"}
+	agentSession.events <- Event{Type: EventText, Content: "finished"}
+	agentSession.events <- Event{Type: EventResult, Content: "finished", Done: true}
+
+	e.processInteractiveEvents(state, session, e.sessions, sessionKey, "m-reply-path", time.Now(), nil, nil, state.replyCtx)
+
+	replies, pushes := p.getRoutes()
+	if len(pushes) != 0 {
+		t.Fatalf("user-triggered turn used proactive Send path: %#v", pushes)
+	}
+	if len(replies) < 4 {
+		t.Fatalf("reply messages = %#v, want thinking, tool use, tool result, and final answer", replies)
+	}
+	if got := replies[len(replies)-1]; got != "finished" {
+		t.Fatalf("final reply = %q, want %q; all replies = %#v", got, "finished", replies)
 	}
 }
 
@@ -2440,7 +2507,7 @@ func countCardActionValues(card *Card, prefix string) int {
 	return count
 }
 
-func waitForSentCard(t *testing.T, p *stubCardPlatform) *Card {
+func waitForRepliedCard(t *testing.T, p *stubCardPlatform) *Card {
 	t.Helper()
 	deadline := time.After(2 * time.Second)
 	ticker := time.NewTicker(10 * time.Millisecond)
@@ -2449,14 +2516,14 @@ func waitForSentCard(t *testing.T, p *stubCardPlatform) *Card {
 		select {
 		case <-deadline:
 			p.mu.Lock()
-			count := len(p.sentCards)
+			count := len(p.repliedCards)
 			p.mu.Unlock()
-			t.Fatalf("timed out waiting for sent card, sentCards=%d", count)
+			t.Fatalf("timed out waiting for replied card, repliedCards=%d", count)
 		case <-ticker.C:
 			p.mu.Lock()
 			var card *Card
-			if len(p.sentCards) > 0 {
-				card = p.sentCards[0]
+			if len(p.repliedCards) > 0 {
+				card = p.repliedCards[0]
 			}
 			p.mu.Unlock()
 			if card != nil {
@@ -3044,10 +3111,10 @@ func TestSendPermissionPrompt_CardPlatform(t *testing.T) {
 
 	e.sendPermissionPrompt(p, "ctx", "full prompt text", "write_file", "/tmp/test.txt")
 
-	if len(p.sentCards) != 1 {
-		t.Fatalf("expected 1 sent card, got %d", len(p.sentCards))
+	if len(p.repliedCards) != 1 {
+		t.Fatalf("expected 1 replied card, got %d", len(p.repliedCards))
 	}
-	card := p.sentCards[0]
+	card := p.repliedCards[0]
 	if card.Header == nil || card.Header.Color != "orange" {
 		t.Errorf("expected orange header, got %+v", card.Header)
 	}
@@ -6612,10 +6679,10 @@ func TestSendAskQuestionPrompt_CardPlatform(t *testing.T) {
 	p := &stubCardPlatform{stubPlatformEngine: stubPlatformEngine{n: "feishu"}}
 	e.sendAskQuestionPrompt(p, "ctx", testQuestions(), 0)
 
-	if len(p.sentCards) != 1 {
-		t.Fatalf("expected 1 card, got %d", len(p.sentCards))
+	if len(p.repliedCards) != 1 {
+		t.Fatalf("expected 1 replied card, got %d", len(p.repliedCards))
 	}
-	card := p.sentCards[0]
+	card := p.repliedCards[0]
 	if card.Header == nil || card.Header.Color != "blue" {
 		t.Errorf("expected blue header, got %+v", card.Header)
 	}
@@ -6631,10 +6698,10 @@ func TestSendAskQuestionPrompt_CardPlatform_MultiQuestion_ShowsIndex(t *testing.
 	qs := testMultiQuestions()
 	e.sendAskQuestionPrompt(p, "ctx", qs, 0)
 
-	if len(p.sentCards) != 1 {
-		t.Fatalf("expected 1 card, got %d", len(p.sentCards))
+	if len(p.repliedCards) != 1 {
+		t.Fatalf("expected 1 replied card, got %d", len(p.repliedCards))
 	}
-	card := p.sentCards[0]
+	card := p.repliedCards[0]
 	if !strings.Contains(card.Header.Title, "(1/2)") {
 		t.Errorf("expected (1/2) in title, got %s", card.Header.Title)
 	}
@@ -6722,7 +6789,7 @@ func TestProcessInteractiveEvents_AskUserQuestionFromAgent_RendersRichCardPrompt
 		Questions:    testQuestions(),
 	}
 
-	card := waitForSentCard(t, &p.stubCardPlatform)
+	card := waitForRepliedCard(t, &p.stubCardPlatform)
 	if card.Header == nil || card.Header.Color != "blue" {
 		t.Fatalf("card header = %#v, want blue AskUserQuestion card", card.Header)
 	}

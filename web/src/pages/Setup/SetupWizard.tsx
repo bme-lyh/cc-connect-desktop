@@ -29,6 +29,8 @@ export default function SetupWizard() {
   const [directoryPicking, setDirectoryPicking] = useState(false);
   const [reasoningEffort, setReasoningEffort] = useState('medium');
   const [replyFooter, setReplyFooter] = useState(false);
+  const [thinkingMessages, setThinkingMessages] = useState(true);
+  const [toolMessages, setToolMessages] = useState(true);
   const [platformType, setPlatformType] = useState('');
   const [originalPlatformType, setOriginalPlatformType] = useState('');
   const [options, setOptions] = useState<Values>({});
@@ -50,6 +52,8 @@ export default function SetupWizard() {
           setModel(editing.model || '');
           setReasoningEffort(editing.reasoning_effort || 'medium');
           setReplyFooter(editing.reply_footer);
+          setThinkingMessages(editing.thinking_messages ?? true);
+          setToolMessages(editing.tool_messages ?? true);
           setPlatformType(editing.platform_type);
           setOriginalPlatformType(editing.platform_type);
         } else {
@@ -142,6 +146,8 @@ export default function SetupWizard() {
         model: model.trim() || undefined,
         reasoning_effort: reasoningEffort || undefined,
         reply_footer: replyFooter,
+        thinking_messages: thinkingMessages,
+        tool_messages: toolMessages,
         platform_type: platformType,
         options,
       };
@@ -220,6 +226,20 @@ export default function SetupWizard() {
               <span className="block text-xs text-gray-500 mt-0.5">{t('simple.wizard.showReplyFooterHint')}</span>
             </span>
             <input aria-label={t('simple.wizard.showReplyFooter')} type="checkbox" checked={replyFooter} onChange={event => setReplyFooter(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
+          </label>
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-3 cursor-pointer">
+            <span>
+              <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">{t('settings.thinkingMessages', 'Thinking messages')}</span>
+              <span className="block text-xs text-gray-500 mt-0.5">{t('settings.thinkingMessagesHint', 'Show or hide intermediate thinking messages')}</span>
+            </span>
+            <input aria-label={t('settings.thinkingMessages', 'Thinking messages')} type="checkbox" checked={thinkingMessages} onChange={event => setThinkingMessages(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
+          </label>
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-3 cursor-pointer">
+            <span>
+              <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">{t('settings.toolMessages', 'Tool progress')}</span>
+              <span className="block text-xs text-gray-500 mt-0.5">{t('settings.toolMessagesHint', 'Show or hide tool calls and results')}</span>
+            </span>
+            <input aria-label={t('settings.toolMessages', 'Tool progress')} type="checkbox" checked={toolMessages} onChange={event => setToolMessages(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
           </label>
           <WizardActions back={back} next={next} nextDisabled={!workDir.trim()} />
         </div>

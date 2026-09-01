@@ -38,6 +38,8 @@ On Windows, agent version and sign-in checks run without opening console windows
 
 **Show answer details** controls the answer footer containing model, reasoning effort, token usage, context use, and workspace. New simple bots default to a clean answer with this disabled; editing an older bot preserves its current setting. Advanced projects expose the same master control as **Reply footer**.
 
+The same bot settings page also controls **Thinking messages** and **Tool progress**. Disabling tool progress hides both tool calls and tool results while keeping the agent's final answer; these choices are saved per bot.
+
 Use **Quit cc-connect** in the top-right header to stop all bots and the local background process gracefully. This is different from **Log out**, which only removes the browser's saved management token. Restart the application later from the desktop shortcut or `cc-connect web`.
 
 Saving a bot validates the workspace, agent and platform fields, writes the configuration atomically, and performs a controlled restart without creating a Windows console window. If the managed configuration cannot be loaded, cc-connect restores `config.toml.previous`. Stopping or removing a bot leaves its session data and stored credentials intact.

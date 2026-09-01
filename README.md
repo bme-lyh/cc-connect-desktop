@@ -19,6 +19,7 @@ A simpler Windows desktop edition of cc-connect. It lets you use local coding ag
 - 支持 Windows 文件夹选择器和本机模型发现。
 - 可以在网页里启动、停止、编辑机器人，也可以手动退出程序。
 - 可以选择是否在回答底部显示运行信息。
+- 可以分别选择是否显示思考消息，以及工具调用和工具结果。
 - Windows 下的机器人密钥保存在 Credential Manager，不以明文写入配置文件。
 - 保留原项目的高级配置、平台适配和命令行用法。
 
@@ -73,6 +74,7 @@ This edition focuses on an easier first run:
 - Pick a Windows folder and discover models available on the machine.
 - Start, stop, edit, or quit local bots from the browser page.
 - Choose whether runtime details appear below answers.
+- Choose whether thinking messages and tool calls/results are shown.
 - Store bot secrets in Windows Credential Manager instead of plain-text configuration.
 - Keep the upstream project's advanced configuration, platforms, and CLI commands.
 
